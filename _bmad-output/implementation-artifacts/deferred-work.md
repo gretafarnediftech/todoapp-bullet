@@ -21,3 +21,8 @@ Items deferred from BMad reviews. Each entry is real but not actionable at the t
 - `themeStyle as React.CSSProperties` cast at `App.tsx:170` hides a real type mismatch — the cast is required because `useTheme().themeStyle` does not satisfy `React.CSSProperties`. Fix the return type of `useTheme` rather than the call site.
 - `{...entriesCtx}` spread at `App.tsx:173` is wider than the declared `BuJoAppProps` — additional fields from `useEntries()` pass unchecked, masking refactors that change the hook's surface.
 - Inner content gets stacked padding (`28px 52px` on the column + `0 10px` on `.bj-list` and the composer) at `App.tsx:102,108,125`. Narrows the working area more than the Dev Notes figure implies.
+
+## Deferred from: code review of 1-3-simulated-loading-state (2026-05-28)
+
+- Unrelated `bj.css` hunks bundled with Story 1.3 (`bj.css:49,422-425`) — `.bj-tab:focus-visible` and `@keyframes bj-circle-scale-in` belong to other stories; exclude from the 1-3 commit.
+- README LoadingState description stale (`README.md:113`) — still lists bullets/pulse/dots only; update when docs are next touched.

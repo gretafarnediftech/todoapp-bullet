@@ -5,10 +5,11 @@ import { WhenChip } from './pickers/DatePicker'
 interface ComposerProps {
   view: EntryView
   density?: 'cozy' | 'compact'
+  disabled?: boolean
   onAdd: (type: EntryType, text: string, when?: string) => void
 }
 
-export function Composer({ view, density = 'cozy', onAdd }: ComposerProps) {
+export function Composer({ view, density = 'cozy', disabled = false, onAdd }: ComposerProps) {
   const [type, setType] = useState<EntryType>('task')
   const [text, setText] = useState('')
   const [when, setWhen] = useState('')
@@ -30,6 +31,7 @@ export function Composer({ view, density = 'cozy', onAdd }: ComposerProps) {
   return (
     <div
       className="bj-composer"
+      aria-disabled={disabled || undefined}
       style={{
         display: 'grid',
         gridTemplateColumns: '22px 1fr auto',
@@ -37,6 +39,8 @@ export function Composer({ view, density = 'cozy', onAdd }: ComposerProps) {
         columnGap: 10,
         padding: density === 'compact' ? '6px 0 0' : '10px 0 0',
         minHeight: 32,
+        opacity: disabled ? 0.45 : 1,
+        pointerEvents: disabled ? 'none' : undefined,
       }}
     >
       {/* Type toggle glyph */}
@@ -44,6 +48,7 @@ export function Composer({ view, density = 'cozy', onAdd }: ComposerProps) {
         type="button"
         className="bj-glyph-btn bj-composer-glyph bj-write"
         onClick={() => setType(type === 'task' ? 'event' : 'task')}
+        disabled={disabled}
         title="Click to change type (↑/↓ arrows also work)"
         style={{
           appearance: 'none', border: 0, background: 'transparent', padding: 0,
@@ -60,6 +65,7 @@ export function Composer({ view, density = 'cozy', onAdd }: ComposerProps) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
+          if (disabled) return
           if (e.key === 'Enter') { submit(); return }
           if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault()
@@ -68,6 +74,7 @@ export function Composer({ view, density = 'cozy', onAdd }: ComposerProps) {
         }}
         placeholder={placeholder}
         aria-label={placeholder}
+        disabled={disabled}
         className="bj-composer-input bj-write"
         style={{
           appearance: 'none', border: 0, outline: 'none',
@@ -81,9 +88,9 @@ export function Composer({ view, density = 'cozy', onAdd }: ComposerProps) {
 
       {/* When + submit */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <WhenChip value={when} onChange={setWhen} view={view} />
+        <WhenChip value={when} onChange={setWhen} view={view} disabled={disabled} />
         {text && (
-          <button onClick={submit} className="bj-submit">return ↵</button>
+          <button onClick={submit} className="bj-submit" disabled={disabled}>return ↵</button>
         )}
       </div>
     </div>

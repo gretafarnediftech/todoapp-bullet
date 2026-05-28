@@ -48,10 +48,24 @@ function LoadingDots() {
   )
 }
 
-export function LoadingState({ variant = 'bullets' }: { variant?: 'bullets' | 'pulse' | 'dots' }) {
+function LoadingSkeleton() {
+  const widths = ['88%', '72%', '94%', '60%']
+  return (
+    <div className="bj-load-skeleton" aria-label="Loading">
+      {widths.map((width, i) => (
+        <div key={i} className="bj-load-skeleton-row">
+          <span className="bj-load-skeleton-glyph animate-pulse" />
+          <span className="bj-load-skeleton-line animate-pulse" style={{ width }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function LoadingState({ variant = 'skeleton' }: { variant?: 'skeleton' | 'bullets' | 'pulse' | 'dots' }) {
   return (
     <div className="bj-state bj-state-loading">
-      {variant === 'pulse' ? <LoadingPulse /> : variant === 'dots' ? <LoadingDots /> : <LoadingBullets />}
+      {variant === 'skeleton' ? <LoadingSkeleton /> : variant === 'pulse' ? <LoadingPulse /> : variant === 'dots' ? <LoadingDots /> : <LoadingBullets />}
       <div className="bj-state-p bj-write" style={{ fontSize: 18 }}>Fetching the page…</div>
     </div>
   )

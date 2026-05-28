@@ -159,14 +159,14 @@ export function DatePicker({ value, onChange, onClose, view }: {
 
 // ─── WhenChip (shared by Composer + EntryRow edit) ────────────
 
-export function WhenChip({ value, onChange, view }: { value: string; onChange: (v: string) => void; view: EntryView }) {
+export function WhenChip({ value, onChange, view, disabled = false }: { value: string; onChange: (v: string) => void; view: EntryView; disabled?: boolean }) {
   const [open, setOpen] = useState(false)
   const mode = view === 'daily' ? 'time' : 'date'
 
   return (
     <span className="bj-composer-when-wrap">
       {value ? (
-        <button type="button" className="bj-composer-when bj-write" onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="bj-composer-when bj-write" onClick={() => setOpen((v) => !v)} disabled={disabled}>
           {formatWhen(value, view)}
         </button>
       ) : (
@@ -176,12 +176,13 @@ export function WhenChip({ value, onChange, view }: { value: string; onChange: (
           onClick={() => setOpen((v) => !v)}
           title={mode === 'time' ? 'Add a time' : 'Add a date'}
           aria-label={mode === 'time' ? 'Add a time' : 'Add a date'}
+          disabled={disabled}
         >
           {mode === 'time' ? <ClockIcon /> : <CalendarPlusIcon />}
         </button>
       )}
       {value && (
-        <button type="button" aria-label="Clear" className="bj-composer-when-x" onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false) }}>×</button>
+        <button type="button" aria-label="Clear" className="bj-composer-when-x" onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false) }} disabled={disabled}>×</button>
       )}
       {open && (
         mode === 'time'
