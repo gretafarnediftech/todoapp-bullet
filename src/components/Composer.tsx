@@ -15,7 +15,11 @@ export function Composer({ view, density = 'cozy', disabled = false, onAdd }: Co
   const [when, setWhen] = useState('')
 
   // Reset when crossing views
-  useEffect(() => { setWhen(''); }, [view])
+  useEffect(() => {
+    setText('')
+    setWhen('')
+    setType('task')
+  }, [view])
 
   const submit = () => {
     if (!text.trim()) return

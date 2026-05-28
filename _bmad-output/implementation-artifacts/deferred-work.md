@@ -53,3 +53,21 @@ Items deferred from BMad reviews. Each entry is real but not actionable at the t
 - d_y1/d_y2 inflate active daily task count for EndOfPeriodBanner (18:00) because filter ignores `createdAt >= startOfToday()` (`App.tsx:activePeriodTasks`).
 - Ritual queue re-derives on view switch while modal open; switching away from daily can swap to `MIGRATION_QUEUE` with mismatched ids (`App.tsx:ritualQueue`).
 - d_y1 text duplicates MIGRATION_QUEUE mq1; fallback ritual can show the same task under different ids (`seed.ts`).
+
+## Deferred from: code review of 1-4-empty-state-per-view (2026-05-28)
+
+- `entries` null/undefined would crash before the `isLoading` guard; `useEntries` always initialises to `[]` but no defensive guard is in place (`App.tsx:99`).
+- `e.ago` NaN/undefined produces non-deterministic sort order; `useEntries` always writes `ago: 0` on creation but the sort has no guard (`App.tsx:100`).
+- When `isLoading && hasError` are both true simultaneously, `ErrorState` is unreachable and the user has no retry path (`App.tsx:160-163`).
+- `visible` only filters by `view`; when additional filter axes are added (Story 4.2), the EmptyState trigger must be extended to compose them for AC1 correctness (`App.tsx:99-101`).
+
+## Deferred from: code review of 3-1-complete-a-task-with-svg-animation (2026-05-28)
+
+- No `prefers-reduced-motion` guard for completion animations — XGlyph and EventDot both animate unconditionally; pre-existing pattern.
+- Task stroke timing is 180ms per stroke vs UX-DR2 ~150ms — pre-existing, visually acceptable.
+
+## Deferred from: code review of 2-2-add-a-new-entry (2026-05-28)
+
+- No automated tests for add-entry flow — brownfield pattern; revisit when test harness is introduced.
+- Story Dev Notes claim "Enter-only submit" but `Composer` renders a `return ↵` button when text is non-empty (`Composer.tsx:92-94`) — doc inaccuracy only.
+- Composer event glyph uses Unicode `○` while list rows use SVG `EventDot` (`Composer.tsx:28`, `Glyph.tsx`) — pre-existing visual inconsistency.
