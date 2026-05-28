@@ -1,5 +1,5 @@
 import type { EntryView } from '../types/entry'
-import { LogoBook, Sun, Moon, Info } from './doodles/Doodle'
+import { Sun, Moon, Info } from './doodles/Doodle'
 import { Tabs } from './Tabs'
 
 interface HeaderBarProps {
@@ -22,56 +22,69 @@ export function HeaderBar({ mobile, view, onChangeView, isDark, onToggleDark, on
 
   return (
     <header style={{
-      display: 'flex', alignItems: 'center',
-      padding: mobile ? '12px 16px 4px' : '18px 0 0',
-      gap: 12,
       flexShrink: 0,
       borderBottom: mobile ? 'none' : '1px solid var(--bj-rule)',
       marginBottom: mobile ? 0 : 4,
     }}>
-      {/* Logo */}
-      <div className="bj-logo" style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
-        <LogoBook size={mobile ? 24 : 28} />
-        <span style={{
-          fontFamily: 'var(--bj-ui-font)',
-          fontSize: mobile ? 15 : 16,
-          fontWeight: 700,
-          letterSpacing: -0.3,
-          opacity: 0.85,
-        }}>Journal</span>
-      </div>
-
-      {/* Desktop tabs inline with header — strip the bottom padding since we're inside the header */}
-      {!mobile && (
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <Tabs view={view} onChange={onChangeView} mobile={false} />
-          </div>
+      {/* Inner column constrained to match body 680px column */}
+      <div style={{
+        maxWidth: 1048,
+        margin: '0 auto',
+        display: 'flex',
+        alignItems: 'center',
+        padding: mobile ? '12px 16px 4px' : '18px 0 0',
+        gap: 12,
+      }}>
+        {/* Logo */}
+        <div className="bj-logo" style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
+          <span style={{
+            fontFamily: 'var(--bj-font)',
+            fontSize: mobile ? 18 : 20,
+            fontWeight: 700,
+            lineHeight: 1,
+            opacity: 0.9,
+          }}>•</span>
+          <span style={{
+            fontFamily: 'var(--bj-font)',
+            fontSize: mobile ? 18 : 20,
+            fontWeight: 700,
+            letterSpacing: -0.2,
+            opacity: 0.9,
+          }}>Journal</span>
         </div>
-      )}
 
-      {mobile && <div style={{ flex: 1 }} />}
+        {/* Desktop tabs inline with header */}
+        {!mobile && (
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Tabs view={view} onChange={onChangeView} mobile={false} />
+            </div>
+          </div>
+        )}
 
-      {/* Icon buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: '0 0 auto' }}>
-        <button
-          style={btnStyle}
-          className="bj-header-btn"
-          onClick={onShowLegend}
-          aria-label="Show bullet key"
-          title="Bullet key"
-        >
-          <Info size={18} />
-        </button>
-        <button
-          style={btnStyle}
-          className="bj-header-btn"
-          onClick={onToggleDark}
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          title={isDark ? 'Light mode' : 'Dark mode'}
-        >
-          {isDark ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        {mobile && <div style={{ flex: 1 }} />}
+
+        {/* Icon buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: '0 0 auto' }}>
+          <button
+            style={btnStyle}
+            className="bj-header-btn"
+            onClick={onShowLegend}
+            aria-label="Show bullet key"
+            title="Bullet key"
+          >
+            <Info size={18} />
+          </button>
+          <button
+            style={btnStyle}
+            className="bj-header-btn"
+            onClick={onToggleDark}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={isDark ? 'Light mode' : 'Dark mode'}
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </div>
     </header>
   )

@@ -12,31 +12,6 @@ import { Composer } from './Composer'
 import { MigrationPrompt } from './MigrationPrompt'
 import { LegendModal } from './LegendModal'
 import { EmptyState } from './states/EmptyState'
-import {
-  MascotMountain, MascotPlant, MascotFrog, MascotRocket,
-} from './doodles/Doodle'
-
-// ─── Per-view mascot ─────────────────────────────────────────
-function ViewMascot({ view, mobile }: { view: EntryView; mobile: boolean }) {
-  const size = mobile ? 60 : 80
-  const mascot = {
-    daily:   <MascotFrog size={size} />,
-    weekly:  <MascotRocket size={size} />,
-    monthly: <MascotPlant size={size} />,
-    backlog: <MascotMountain size={size} />,
-  }[view]
-
-  return (
-    <div
-      className={`bj-mascot bj-mascot-${view}`}
-      style={{ position: 'absolute', right: mobile ? 8 : 32, bottom: mobile ? 80 : 40, color: 'var(--bj-ink)' }}
-      aria-hidden
-    >
-      {mascot}
-    </div>
-  )
-}
-
 // ─── BuJoApp ──────────────────────────────────────────────────
 interface BuJoAppProps {
   mobile: boolean
@@ -99,7 +74,7 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, cycle, add
         style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', zIndex: 1 }}
       >
         {/* Centred column — max-width on desktop, full-width on mobile */}
-        <div style={{ maxWidth: 680, margin: '0 auto', padding: pad, boxSizing: 'border-box', position: 'relative' }}>
+        <div style={{ maxWidth: 1048, margin: '0 auto', padding: pad, boxSizing: 'border-box', position: 'relative' }}>
           <ViewHeader view={view} mobile={mobile} showDoodles />
 
           {visible.length === 0 ? (
@@ -130,8 +105,6 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, cycle, add
           </div>
         </div>
 
-        {/* Per-view mascot — positioned absolute within bj-scroll (full viewport width) */}
-        <ViewMascot view={view} mobile={mobile} />
       </div>
 
       {/* Mobile bottom tab bar */}
@@ -164,7 +137,7 @@ export default function App() {
   }, [])
 
   return (
-    <div style={{ height: '100vh' }}>
+    <div style={{ height: '100dvh' }}>
       <BuJoApp
         mobile={isMobile}
         themeStyle={themeStyle as React.CSSProperties}

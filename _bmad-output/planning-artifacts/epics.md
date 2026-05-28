@@ -131,7 +131,7 @@ So that I have a consistent visual container for all views and interactions.
 **Then** I see the app title and a single-column centred layout (max-width ~680px on desktop)
 **And** the Kalam font (Google Fonts) is loaded and applied to all text
 **And** the background is ivory/cream (#FAFAF7) with a subtle dot grid texture visible
-**And** on mobile (< 640px) the layout is full-width with appropriate horizontal padding
+**And** on mobile (< 768px) the layout is full-width with appropriate horizontal padding
 **And** no errors appear in the browser console
 
 **Design Decisions:**

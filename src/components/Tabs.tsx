@@ -52,16 +52,6 @@ export function Tabs({ view, onChange, mobile }: TabsProps) {
           >
             <v.Icon size={mobile ? 18 : 15} opacity={active ? 0.9 : 0.6} />
             <span>{v.label}</span>
-            {active && (
-              <span style={{
-                position: 'absolute', left: '50%',
-                bottom: mobile ? -2 : -4,
-                transform: 'translateX(-50%)',
-                width: mobile ? 22 : 18, height: 2,
-                background: 'currentColor',
-                borderRadius: 2,
-              }} />
-            )}
           </button>
         )
       })}
