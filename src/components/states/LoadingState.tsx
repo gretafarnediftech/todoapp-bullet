@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 
 const LOAD_FRAMES = [
-  { ch: '·', size: 1.00, dy: -0.18 },
-  { ch: '×', size: 0.85, dy:  0.00 },
-  { ch: '–', size: 1.00, dy: -0.04 },
-  { ch: '›', size: 0.95, dy: -0.04 },
-  { ch: '○', size: 0.72, dy:  0.00 },
+  { ch: '.', size: 0.90, dy:  0.10 },
+  { ch: '-', size: 0.80, dy: -0.08 },
+  { ch: '>', size: 0.85, dy: -0.04 },
 ]
 
 function LoadingBullets() {
@@ -62,7 +60,7 @@ function LoadingSkeleton() {
   )
 }
 
-export function LoadingState({ variant = 'skeleton' }: { variant?: 'skeleton' | 'bullets' | 'pulse' | 'dots' }) {
+export function LoadingState({ variant = 'bullets' }: { variant?: 'skeleton' | 'bullets' | 'pulse' | 'dots' }) {
   return (
     <div className="bj-state bj-state-loading">
       {variant === 'skeleton' ? <LoadingSkeleton /> : variant === 'pulse' ? <LoadingPulse /> : variant === 'dots' ? <LoadingDots /> : <LoadingBullets />}

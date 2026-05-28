@@ -208,7 +208,7 @@ The mode toggle (sun/moon icon in the header) switches between the two palettes 
 ## Loading state
 
 Three animation variants (default: `bullets`):
-- **bullets**: cycles through BuJo symbols (· × – › ○) with scale+rotate entrance animation, 380ms interval
+- **bullets**: cycles through `. - >` with scale+rotate entrance animation, 380ms interval
 - **pulse**: single `·` with expanding concentric rings
 - **dots**: three `·` bouncing in sequence
 

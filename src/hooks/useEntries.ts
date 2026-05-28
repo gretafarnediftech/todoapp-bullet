@@ -25,13 +25,13 @@ function loadEntries(): Entry[] {
 
 // ─── Period boundary helpers ──────────────────────────────────
 
-function startOfToday(): number {
+export function startOfToday(): number {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
   return d.getTime()
 }
 
-function startOfThisWeek(): number {
+export function startOfThisWeek(): number {
   const d = new Date()
   const dayOfWeek = (d.getDay() + 6) % 7  // Monday = 0
   d.setDate(d.getDate() - dayOfWeek)
@@ -39,7 +39,7 @@ function startOfThisWeek(): number {
   return d.getTime()
 }
 
-function startOfThisMonth(): number {
+export function startOfThisMonth(): number {
   const d = new Date()
   d.setDate(1)
   d.setHours(0, 0, 0, 0)

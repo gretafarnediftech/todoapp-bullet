@@ -103,7 +103,6 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
   const [draft, setDraft] = useState(entry.text)
   const [draftWhen, setDraftWhen] = useState(entry.when ?? '')
   const [justDone, setJustDone] = useState(false)
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [selected, setSelected] = useState(false)
 
@@ -117,7 +116,6 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
     const onDoc = (e: MouseEvent) => {
       if (rowRef.current && !rowRef.current.contains(e.target as Node)) {
         setSelected(false)
-        setConfirmingDelete(false)
       }
     }
     document.addEventListener('mousedown', onDoc)
@@ -168,14 +166,14 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
   const handleRowClick = (e: React.MouseEvent) => {
     if (!mobile || editing) return
     const t = e.target as Element
-    if (t.closest('.bj-glyph-btn') || t.closest('.bj-actions') || t.closest('.bj-confirm') || t.closest('.bj-edit-input') || t.closest('.bj-when-pop')) return
+    if (t.closest('.bj-glyph-btn') || t.closest('.bj-actions') || t.closest('.bj-edit-input') || t.closest('.bj-when-pop')) return
     setSelected((s) => !s)
   }
 
   const dim = entry.status !== 'active'
   const lineH = density === 'compact' ? 28 : 36
   const showActions = mobile ? (selected || moveOpen) : (hover || moveOpen)
-  const canMigrate = entry.type === 'task' && entry.status === 'active'
+  const canMigrate = (entry.type === 'task' || entry.type === 'event') && entry.status === 'active'
 
   return (
     <div
@@ -190,14 +188,13 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
         padding: density === 'compact' ? '2px 10px' : '4px 10px',
         margin: '0 -10px',
         borderRadius: 4,
-        opacity: dim ? 0.28 : 1,
         position: 'relative',
-        transition: 'opacity .3s ease, background .15s ease',
-        background: (hover || editing || confirmingDelete || selected) ? 'var(--bj-soft)' : 'transparent',
+        transition: 'background .15s ease',
+        background: (hover || editing || selected) ? 'var(--bj-soft)' : 'transparent',
         cursor: mobile && !editing ? 'pointer' : 'default',
       }}
       onMouseEnter={() => !mobile && setHover(true)}
-      onMouseLeave={() => { if (!moveOpen) { setHover(false); setConfirmingDelete(false) } }}
+      onMouseLeave={() => { if (!moveOpen) { setHover(false) } }}
       onClick={handleRowClick}
     >
       {/* Glyph button */}
@@ -212,8 +209,9 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
           width: 22, height: lineH, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
           fontWeight: 700, fontSize: '1.15em',
-          transition: 'transform .12s ease',
+          transition: 'transform .12s ease, opacity .3s ease',
           position: 'relative',
+          opacity: dim ? 0.28 : 1,
         }}
       >
         <Glyph entry={entry} animate={justDone} />
@@ -233,10 +231,15 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
             fontFamily: 'var(--bj-font)', fontSize: '1.1em',
             fontWeight: 'inherit', padding: 0, width: '100%',
             lineHeight: 1.35,
+            opacity: dim ? 0.28 : 1,
           }}
         />
       ) : (
-        <span className="bj-write" style={{ lineHeight: 1.35, wordBreak: 'break-word', fontSize: '1.1em' }}>
+        <span className="bj-write" style={{
+          lineHeight: 1.35, wordBreak: 'break-word', fontSize: '1.1em',
+          opacity: dim ? 0.28 : 1,
+          transition: 'opacity .3s ease',
+        }}>
           {entry.originalText && entry.originalText !== entry.text && (
             <span style={{
               textDecoration: 'line-through', textDecorationThickness: '1px',
@@ -255,10 +258,10 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
         {editing && (
           <WhenChip value={draftWhen} onChange={setDraftWhen} view={view} />
         )}
-        {!editing && !showActions && !confirmingDelete && entry.when && (
+        {!editing && !showActions && entry.when && (
           <span className="bj-row-when bj-write">{formatWhen(entry.when, view)}</span>
         )}
-        {showActions && !editing && !confirmingDelete && (
+        {showActions && !editing && (
           <div className="bj-actions" style={{ display: 'flex', gap: 2 }}>
             <button className="bj-act" onClick={() => { setEditing(true); setHover(false); setSelected(false) }} title="Edit">
               <EditIcon />
@@ -277,16 +280,9 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
                 )}
               </span>
             )}
-            <button className="bj-act" onClick={() => setConfirmingDelete(true)} title="Delete">
+            <button className="bj-act" onClick={() => onDelete(entry.id)} title="Delete">
               <Trash size={15} />
             </button>
-          </div>
-        )}
-        {confirmingDelete && (
-          <div className="bj-confirm bj-write" role="alertdialog">
-            <span className="bj-confirm-q">delete?</span>
-            <button className="bj-confirm-no" onClick={() => setConfirmingDelete(false)} autoFocus>cancel</button>
-            <button className="bj-confirm-yes" onClick={() => { setConfirmingDelete(false); onDelete(entry.id) }}>yes</button>
           </div>
         )}
       </div>

@@ -1,177 +1,116 @@
-# Sprint Change Proposal — Time-Based Reminder Triggers
+# Sprint Change Proposal — Story 4.1 Post-Review Spec Alignment
+
 **Date:** 2026-05-28
-**Author:** Gretafarnedi
-**Status:** Approved
+**Trigger story:** 4.1 — Migration Ritual — Evening Banner & Per-View Blocking Prompt
+**Scope:** Minor — direct spec update, no backlog reorganisation or MVP change
 
 ---
 
-## Section 1: Issue Summary
+## 1. Issue Summary
 
-**Problem statement:** Story 4.1 ("Migration Ritual Prompt on App Open") specified the migration ritual trigger as "on app open" without defining any time-based logic. This left the timing of both the end-of-day reminder and the blocking migration modal undefined and unimplemented. The requirement has now been clarified: the two existing UI components (`EndOfPeriodBanner` and `MigrationPrompt`) must be triggered at specific times of day, immediately in-session.
+During code review of Story 4.1, the original `00:01` clock-based polling trigger for the migration ritual was redesigned following product clarification. The spec assumed a global `setInterval` checking for midnight; the actual product intent is:
 
-**Discovery context:** Identified during sprint review of the current implementation. The components exist in code but `setMigrationOpen` is never called and `EndOfPeriodBanner` is never rendered — the wiring was deferred because timing had not been specified.
-
----
-
-## Section 2: Impact Analysis
-
-**Epic impact:**
-- Epic 4 (Migration Ritual & Filters) — Story 4.1 significantly rewritten. Story 4.2 (filters) unaffected. No other epics affected.
-
-**Story impact:**
-- Story 4.1 — title, description, acceptance criteria, and design decisions all updated.
-- No other stories require changes.
-
-**Artifact conflicts resolved:**
-- `epics.md` — FR7, Epic 4 description, Story 4.1 (title, story, AC, design decisions) updated.
-- `project-brief.md` — Core User Flow 7 updated.
-
-**Technical impact:**
-- New `useTimeReminder` hook required — runs `setInterval` every 60s, checks against 18:00 and 00:01 thresholds.
-- `unresolvedFromPreviousPeriod()` utility needed in `useEntries` — compares entry view + creation date against previous calendar period.
-- `App.tsx` needs `showBanner` state wired to `EndOfPeriodBanner` render.
-- `MigrationPrompt` needs `canDefer={false}` path to disable dismiss when opened by the 00:01 trigger.
-- No new global state shape — uses existing `showBanner` / `migrationOpen` patterns.
+- The ritual fires **on navigation into a view**, not on a global clock tick
+- **Daily**: any day, on first entry to Daily view in a session, if there are tasks from before today's midnight
+- **Weekly**: on Monday (or first app-open since the week started), on first entry to Weekly view
+- **Monthly**: on the 1st (or first app-open since the month started), on first entry to Monthly view
+- Each view's ritual is **independent** — both Daily and Weekly can fire in the same session
+- The ritual queue is **stabilised** at modal-open time (not recomputed from live view state)
+- The 18:00 banner trigger remains time-based and is **unchanged in intent**
 
 ---
 
-## Section 3: Recommended Approach
+## 2. Impact Analysis
 
-**Selected path:** Option 1 — Direct Adjustment (modify Story 4.1, add implementation tasks).
-
-**Rationale:** The components already exist. The change is purely additive — wire up time logic that was always intended but never specified. No rollback needed, no MVP scope change required. Effort is low, risk is low.
-
-**Effort estimate:** Low
-**Risk level:** Low
-**Timeline impact:** None — Story 4.1 was not yet implemented.
-
----
-
-## Section 4: Detailed Change Proposals
-
-### Change 1 — `epics.md` · FR7
-**Old:** "On app open, if unresolved tasks exist from the previous period, a migration ritual prompt is shown"
-**New:** Two explicit time-based triggers: 18:00 (non-blocking banner) and 00:01 (blocking modal).
-
-### Change 2 — `epics.md` · Story 4.1 title + description
-**Old:** "Migration Ritual Prompt on App Open" / prompted on open
-**New:** "Migration Ritual — Time-Triggered Banner & Blocking Prompt" / triggered at 18:00 and 00:01
-
-### Change 3 — `epics.md` · Story 4.1 Acceptance Criteria
-**Old:** Single "given app has loaded" trigger with "Maybe later" dismiss.
-**New:** Two separate AC blocks — 18:00 (banner, dismissible via ×) and 00:01 (blocking modal, no dismiss until all tasks actioned).
-
-### Change 4 — `epics.md` · Story 4.1 Design Decisions
-**Old:** `unresolvedFromPreviousPeriod()` + banner with "Review now" + "Maybe later".
-**New:** `useTimeReminder` hook with 60s interval; `canDefer={false}` on 00:01 modal; no "Review now" on banner.
-
-### Change 5 — `project-brief.md` · Core User Flow 7
-**Old:** "On first open each day/week/month..."
-**New:** 18:00 dismissible banner + 00:01 blocking modal, both fire immediately in-session.
+| Area | Impact |
+|------|--------|
+| **Epic 4** | Intro text was wrong — referenced "00:01 blocking modal"; updated to navigation trigger |
+| **Story 4.1 ACs** | "00:01 TRIGGER" section replaced entirely with "NAVIGATION TRIGGER" |
+| **Story 4.1 Design Decisions** | Hook description, queue capture, session tracking updated |
+| **FR7 (requirements inventory)** | Reworded to reflect navigation-based trigger and per-view windows |
+| **UX Spec** | No references to time triggers — no changes needed |
+| **Architecture doc** | Not present |
+| **Future stories** | No dependent stories |
+| **MVP scope** | Unchanged — FR7 is still fully covered |
 
 ---
 
-## Section 5: Implementation Handoff
+## 3. Recommended Approach
 
-**Change scope:** Minor — direct implementation by Developer agent.
+**Direct Adjustment** — update `epics.md` in-place with before/after edits. No rollback, no sprint restructuring.
 
-**Handoff:** Developer agent (Amelia / `bmad-dev-story`)
-
-**Responsibilities:**
-1. Create `useTimeReminder` hook — `setInterval` every 60s, compares `new Date().getHours()` + `new Date().getMinutes()` against thresholds; fires callbacks on first crossing per session.
-2. Add `unresolvedFromPreviousPeriod()` to `useEntries` — checks entries by view + date.
-3. Wire `showBanner` state in `App.tsx` → render `EndOfPeriodBanner`.
-4. Wire `migrationOpen: 'ritual'` trigger in `App.tsx` at 00:01.
-5. Update `MigrationPrompt` to handle `canDefer={false}` (no backdrop dismiss, no "Maybe later").
-
-**Success criteria:**
-- At 18:00 (or with app open past 18:00), `EndOfPeriodBanner` appears immediately if active tasks exist.
-- Banner dismisses cleanly with × and does not reappear in the same session.
-- At 00:01 (or with app open past 00:01), `MigrationPrompt` opens immediately if previous-period tasks exist.
-- Modal cannot be closed until all tasks are actioned (today / future / drop).
-- Neither trigger fires if there are no qualifying tasks.
+- Effort: Low
+- Risk: Low
+- Timeline impact: None (code already implemented and reviewed)
 
 ---
 
-# Sprint Change Proposal — Story 2.1 Spec Alignment
-**Date:** 2026-05-28
-**Author:** Gretafarnedi
-**Status:** Approved
-**Trigger:** Story 2.1 code review (2026-05-28)
+## 4. Detailed Change Proposals
+
+### Change 1 — FR7 in Requirements Inventory
+
+**OLD:**
+> FR7: At 18:00, if unresolved tasks exist in the current period, a non-blocking end-of-day reminder banner is shown immediately (even if the app is already open). At 00:01, a blocking migration ritual modal is shown immediately in-session, preventing further interaction until the user resolves or dismisses all unresolved tasks.
+
+**NEW:**
+> FR7: At 18:00, if unresolved tasks exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view). On first navigation into a period view in a session, if unresolved tasks from the previous period exist and the view's ritual window is open (Daily: any day; Weekly: Monday or first app-open of the week; Monthly: 1st of month or first app-open of the month), a blocking migration prompt fires — preventing further interaction until all tasks are resolved.
 
 ---
 
-## Section 1: Issue Summary
+### Change 2 — Epic 4 intro paragraph
 
-**Problem statement:** Story 2.1 implementation diverged from the original epic text in three areas confirmed during code review: (1) sort order — epic said newest-first but product confirmed oldest-top / newest-bottom per `docs/bujo-design-spec.md`; (2) timestamps — epic and FR10 referenced relative creation timestamps but UX-DR4 and the running app use optional formatted `when` labels only; (3) component/file naming — epic referenced `mockEntries.ts` and `BulletEntry` but the brownfield codebase uses `seed.ts` and `EntryRow.tsx`.
+**OLD:**
+> At 18:00, users are reminded to deal with unresolved tasks via a non-blocking banner. At 00:01, a blocking modal prevents further interaction until tasks are resolved. Users can also filter the active view to hide completed tasks or notes.
 
-**Discovery context:** Identified during Story 2.1 verification and adversarial code review. User confirmed both sort-order deviation and retention of d_y1/d_y2 seed scaffolding.
-
----
-
-## Section 2: Impact Analysis
-
-**Epic impact:**
-- Epic 2 — Story 2.1 and Story 2.2 AC/design text updated. No scope reduction.
-
-**Story impact:**
-- Story 2.1 — done; specs now match implementation.
-- Story 2.2 — "Just now" and "top of list" references corrected to match sort order.
-
-**Artifact conflicts resolved:**
-- `epics.md` — FR10, UX-DR4, Additional Requirements, Epic 2 description, Stories 2.1 & 2.2, Story 5.1 font-weight note.
-- `project-brief.md` — Entry fields row and Design Constraints timestamp rule.
-- `component-inventory.md` — Brownfield naming map and design decisions table.
-
-**Technical impact:** None — documentation-only alignment. No code changes required.
+**NEW:**
+> At 18:00, users are reminded to deal with unresolved tasks via a non-blocking banner. On first navigation into a period view (Daily/Weekly/Monthly), a blocking migration ritual fires if the view's period window is open and unresolved tasks exist from the previous period — preventing further interaction until tasks are resolved. Users can also filter the active view to hide completed tasks or notes.
 
 ---
 
-## Section 3: Recommended Approach
+### Change 3 — Story 4.1 title and user story
 
-**Selected path:** Option 1 — Direct Adjustment (update planning artifacts to match confirmed implementation).
+**OLD:**
+> Story 4.1: Migration Ritual — Time-Triggered Banner & Blocking Prompt
+> As a user, I want to be reminded at 18:00 … and be required to act on them at 00:01…
 
-**Rationale:** Implementation matches the authoritative design spec (`bujo-design-spec.md`) and was explicitly approved in code review. Updating epics/PRD-adjacent docs removes ambiguity for Stories 2.2+.
-
-**Effort estimate:** Low | **Risk:** Low | **Timeline impact:** None
-
----
-
-## Section 4: Detailed Change Proposals
-
-### Change 1 — Sort order (Story 2.1 AC4)
-**Old:** reverse-chronological (newest first)
-**New:** oldest-first, newest at bottom (BuJo page-fill)
-**Rationale:** Product confirmed during review; matches design spec § Sort order.
-
-### Change 2 — Timestamps (FR10, UX-DR4, Story 2.1 AC2, Story 2.2)
-**Old:** relative creation timestamp ("2h ago", "Just now")
-**New:** optional formatted `when` label when scheduled; `ago` is sort-only, never displayed
-**Rationale:** Resolves FR10 ↔ UX-DR4 conflict; matches `EntryRow.formatWhen()`.
-
-### Change 3 — Entry types in Story 2.1 AC3
-**Old:** task, event, and note per view
-**New:** at least one task and one event per view (notes deferred — `EntryType` is `task | event` only)
-**Rationale:** Matches `seed.ts` and Composer toggle.
-
-### Change 4 — Naming (Story 2.1 design decisions, component inventory)
-**Old:** `mockEntries.ts`, `BulletEntry`
-**New:** `src/data/seed.ts`, `EntryRow.tsx`
-**Rationale:** Brownfield naming map from Story 1.1.
-
-### Change 5 — New entry position (Story 2.2)
-**Old:** appears at top of list
-**New:** appears at bottom (newest position, `ago: 0`)
-**Rationale:** Consistent with sort comparator `b.ago - a.ago`.
+**NEW:**
+> Story 4.1: Migration Ritual — Evening Banner & Per-View Blocking Prompt
+> As a user, I want to be reminded at 18:00 … and be required to deal with them when I next open a period view…
 
 ---
 
-## Section 5: Implementation Handoff
+### Change 4 — Story 4.1 blocking modal AC section
 
-**Change scope:** Minor — documentation updates applied directly.
+Replaced "00:01 TRIGGER" section with "NAVIGATION TRIGGER" covering:
+- Per-view ritual window rules (Daily/Monday/1st-of-month + gap detection)
+- Independent per-view firing
+- Queue scoped to that view's previous period
 
-**Success criteria:**
-- [x] `epics.md` Story 2.1/2.2 AC and design decisions match running app
-- [x] FR10 and UX-DR4 no longer contradict each other
-- [x] `project-brief.md` entry fields align with design constraints
-- [x] `component-inventory.md` includes brownfield naming map
+---
+
+### Change 5 — Story 4.1 Design Decisions
+
+Replaced interval/00:01 hook description with:
+- `useTimeReminder` — banner-only, boolean callback, flag set only on actual display
+- Navigation-based ritual via `useEffect([view, isLoading, entries])`
+- `shouldFireRitualForView()` with per-view window logic
+- `prevLastOpen` from localStorage for gap detection
+- `ritualQueue` as stable `useState` (captured at open time)
+- `shownRitualViews` ref Set for once-per-session-per-view guard
+
+---
+
+## 5. Implementation Handoff
+
+**Scope classification:** Minor
+
+All code changes are already implemented and verified (`npm run build` clean). This proposal covers spec alignment only.
+
+**Files updated:**
+- `_bmad-output/planning-artifacts/epics.md` — all 5 changes applied
+
+**No further implementation required.** The Developer agent can proceed to the next story.
+
+---
+
+*Correct Course workflow complete, Gretafarnedi!*

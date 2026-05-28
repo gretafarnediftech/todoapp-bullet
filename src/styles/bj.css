@@ -335,32 +335,6 @@ body {
 .bj-state-h { font-size: 22px; font-weight: 700; }
 .bj-state-p { font-size: 15px; opacity: 0.6; font-weight: 300; max-width: 320px; }
 
-/* Loading skeleton */
-.bj-load-skeleton {
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 0 10px;
-}
-.bj-load-skeleton-row {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  align-items: center;
-  column-gap: 10px;
-}
-.bj-load-skeleton-glyph {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-  background: var(--bj-soft);
-}
-.bj-load-skeleton-line {
-  height: 12px;
-  border-radius: 2px;
-  background: var(--bj-soft);
-}
 
 /* Empty state */
 .bj-empty {
@@ -421,7 +395,7 @@ body {
 @keyframes bj-stroke { to { stroke-dashoffset: 0; } }
 @keyframes bj-circle-fill-diagonal {
   from { clip-path: polygon(0% 0%, 0% 0%, 0% 0%); }
-  to   { clip-path: polygon(-50% -50%, 150% -50%, -50% 150%); }
+  to   { clip-path: polygon(-50% -50%, 300% -50%, -50% 300%); }
 }
 
 .bj-load-frame {

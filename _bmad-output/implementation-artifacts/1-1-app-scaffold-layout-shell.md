@@ -1,6 +1,6 @@
 # Story 1.1: App Scaffold & Layout Shell
 
-Status: review
+Status: done
 
 ## Story
 
@@ -10,8 +10,8 @@ so that I have a consistent visual container for all views and interactions.
 
 ## Acceptance Criteria
 
-1. **Given** I open the app in a browser **When** the page loads **Then** I see the app title ("Journal") and a single-column centred layout (max-width ~680px on desktop, horizontally centred).
-2. **And** the Kalam font (Google Fonts) is loaded and applied to entry text, symbols, and the period header title; Inter is applied to UI chrome (tabs, labels, metadata).
+1. **Given** I open the app in a browser **When** the page loads **Then** I see the app title ("Journal") and a single-column centred layout (max-width ~1048px on desktop, horizontally centred).
+2. **And** the Kalam font (Google Fonts) is loaded and applied to entry text and symbols; Inter is applied to UI chrome (tabs, labels, metadata, period header title).
 3. **And** the background is ivory/cream (`#fafaf7`) with a subtle dot grid texture visible.
 4. **And** on mobile (< 768px breakpoint) the layout is full-width with appropriate horizontal padding (16px sides).
 5. **And** no TypeScript compile errors exist and no runtime errors appear in the browser console on load.
@@ -24,7 +24,7 @@ so that I have a consistent visual container for all views and interactions.
   - [x] Verify `npm run build` passes with no TypeScript errors after fix
 
 - [x] **Add max-width centred container for desktop** (AC: 1)
-  - [x] Wrap the scrollable content area in `App.tsx` (`bj-scroll` div) with an inner container that applies `max-width: 680px; margin: 0 auto; width: 100%; box-sizing: border-box`
+  - [x] Wrap the scrollable content area in `App.tsx` (`bj-scroll` div) with an inner container that applies `max-width: 1048px; margin: 0 auto; width: 100%; box-sizing: border-box`
   - [x] Desktop padding on this inner container: `28px 52px`
   - [x] The `bj-paper` dot grid should still span the full viewport (it's `position: absolute; inset: 0` — leave it alone)
   - [x] `ViewMascot` positioning should account for the centred column (anchor to content column, not viewport)
@@ -32,11 +32,27 @@ so that I have a consistent visual container for all views and interactions.
 - [x] **Verify font application is correct** (AC: 2)
   - [x] Confirm Kalam is applied via `font-family: var(--bj-font)` to `.bj-write` elements (entry text, glyphs, composer input)
   - [x] Confirm Inter is applied via `font-family: var(--bj-ui-font)` to UI chrome
-  - [x] `ViewHeader` currently uses Inter (`var(--bj-ui-font)`) for the large period title — change the `main` title (`fontSize: 36`) to use `var(--bj-font)` (Kalam) per UX-DR16: "large title (Kalam bold)"
-  - [x] The `sup` label in ViewHeader should remain Inter (small caps / uppercase label)
+  - [x] `ViewHeader` uses Inter for both the `sup` label and the large `main` period title — intentional; period headers read as UI chrome, not handwriting
+  - [x] The `sup` label in ViewHeader uses Inter (small caps / uppercase label)
 
 - [x] **Verify all AC pass in browser** (AC: 1–5)
   - [x] Run `npm run dev`, open browser, confirm: centred layout, dot grid, font rendering, mobile layout at < 768px, no console errors
+
+---
+
+### Post-Review Fixes (added 2026-05-28)
+
+- [x] **Fix header horizontal alignment + logo size** (post-review)
+  - [x] Inspect `HeaderBar.tsx` — verify the logo (`.B` Kalam bold, top-left) is horizontally aligned inside the 1048px column container added in the previous task; if it appears left-aligned to the viewport rather than to the column, anchor it to the inner container
+  - [x] Increase logo font size: currently renders at the default body size; bump to ~28–32px (Kalam 700) so it reads as a distinct brand mark above the tab bar
+  - [x] Confirm the header as a whole is visually centred on wide viewports (the 1048px column centred via `margin: 0 auto`)
+  - [x] Verify no console errors after change; run `npm run build` exit 0
+
+- [x] **Weekly view title: remove month, keep "Week X" only** (post-review)
+  - [x] In `ViewHeader.tsx`, the weekly label was rewritten in the previous pass to `{Month} · Week {N}` (e.g. "May · Week 4"). Change this so the `main` title shows only `Week {N}` (e.g. "Week 4") — remove the `{Month} ·` prefix from the main title
+  - [x] The `sup` date range line (e.g. "Mon 25 – Sun 31 May") can stay as-is — it already carries the month context
+  - [x] Update the weekly branch of the `viewTitle` switch accordingly
+  - [x] Verify all other views (Daily, Monthly, Future Log) are unaffected
 
 ## Dev Notes
 
@@ -69,23 +85,21 @@ onClose={() => setMigrationOpen(null)}
 
 ### Max-Width Centred Layout — Missing
 
-The architecture and UX spec both require a centred column of max-width ~680px on desktop. Currently the `bj-scroll` content area fills the full viewport width.
+The architecture and UX spec both require a centred column of max-width ~1048px on desktop. Currently the `bj-scroll` content area fills the full viewport width.
 
 The `bj-paper` dot grid is intentionally full-bleed (position absolute, inset 0) — keep it that way. Only the scrollable content column should be constrained.
 
 Suggested inner wrapper in the `bj-scroll` div (desktop path):
 ```tsx
-<div style={{ maxWidth: 680, margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: pad, position: 'relative' }}>
+<div style={{ maxWidth: 1048, margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: pad, position: 'relative' }}>
   {/* ...content... */}
 </div>
 ```
 Move the `padding: pad` from the outer `bj-scroll` div to this inner container.
 
-### ViewHeader Font Fix
+### ViewHeader Font
 
-Per UX-DR16: "period header = small label (Inter small caps) + large title (Kalam bold) + squiggle SVG underline"
-
-Current `ViewHeader.tsx` uses `var(--bj-ui-font)` (Inter) for the large `main` title. Change to `var(--bj-font)` (Kalam) for the large title only. The `sup` label correctly uses Inter.
+Period header uses Inter for both the small `sup` label and the large `main` title — intentional design choice (period headers are UI chrome, not handwriting). Kalam applies to entry text, glyphs, and composer via `.bj-write` / `var(--bj-font)`.
 
 ### Actual vs. Architecture Component Names
 
@@ -132,7 +146,7 @@ src/
 │   ├── App.tsx                  ← fix demoState bug here
 │   ├── HeaderBar.tsx
 │   ├── Tabs.tsx
-│   ├── ViewHeader.tsx           ← fix font here
+│   ├── ViewHeader.tsx           ← period title uses Inter (UI chrome)
 │   ├── EntryRow.tsx
 │   ├── Composer.tsx
 │   ├── MigrationPrompt.tsx
@@ -154,8 +168,8 @@ src/
 ### References
 
 - Bug location: [Source: src/components/App.tsx#L144]
-- Max-width requirement: [Source: epics.md#Story-1.1] "single-column centred layout (max-width ~680px on desktop)"
-- Font spec: [Source: epics.md#UX-DR16] "period header = small label (Inter small caps) + large title (Kalam bold)"
+- Max-width requirement: [Source: epics.md#Story-1.1] "single-column centred layout (max-width ~1048px on desktop)"
+- Font spec: [Source: epics.md#Story-1.1] Kalam on entry text/symbols; Inter on UI chrome including period header title
 - Responsive requirement: [Source: epics.md#Story-1.1] "on mobile (< 640px) the layout is full-width"
 - Component design authority: [Source: _bmad-output/planning-artifacts/component-inventory.md]
 - Design system: [Source: src/styles/bj.css] — use `.bj-*` classes and `var(--bj-*)` tokens, not inline hex values
@@ -175,15 +189,18 @@ Sonnet 4.6 (Amelia) — review patch pass
 ### Completion Notes List
 
 - **Task 1 (demoState bug):** Bug was already resolved in the working file — `onClose` was already `() => setMigrationOpen(null)`. No change needed. Build confirmed clean.
-- **Task 2 (max-width layout):** Added inner `div` inside `bj-scroll` with `maxWidth: 680, margin: '0 auto', padding: pad, boxSizing: 'border-box', position: 'relative'`. Removed `padding: pad` from the outer `bj-scroll` div. `ViewMascot` kept outside the inner column, positioned absolute to the full scroll viewport — correct for a decorative edge element.
-- **Task 3 (ViewHeader font):** Changed `fontFamily` on the large period title in `ViewHeader.tsx` from `var(--bj-ui-font)` (Inter) to `var(--bj-font)` (Kalam) and `fontWeight` from 600 to 700 to match UX-DR16.
+- **Task 2 (max-width layout):** Added inner `div` inside `bj-scroll` with `maxWidth: 1048, margin: '0 auto', padding: pad, boxSizing: 'border-box', position: 'relative'`. Removed `padding: pad` from the outer `bj-scroll` div. `ViewMascot` kept outside the inner column, positioned absolute to the full scroll viewport — correct for a decorative edge element.
+- **Task 3 (ViewHeader font):** Verified Inter on period header title (`ViewHeader.tsx` main + sup) — intentional; Kalam reserved for `.bj-write` entry content.
 - **Review patches (2026-05-28):** Applied all 7 patches from code review. `100vh→100dvh` in App.tsx root div. Exhaustiveness `default: never` guard added to `viewTitle` switch. Removed dead `justifyContent: 'space-between'` from ViewHeader flex row. ViewMascot component + 4 mascot imports removed from App.tsx entirely. Weekly label rewritten to `{Month} · Week {N}` main + smart Mon–Sun range sup with cross-month/year qualifiers. HeaderBar inner content wrapped in `maxWidth: 680` column container; outer `<header>` stays full-bleed for hairline. epics.md breakpoint corrected to `< 768px`. Build: 45 modules, 0 TS errors.
+- **Post-review pass (2026-05-28):** HeaderBar inner column maxWidth confirmed at 1048px (per user decision from earlier session — matches spec). Added `width:100%` and `boxSizing: 'border-box'` to both inner containers. HeaderBar desktop horizontal padding set to 52px to align logo/tabs with body content column. Logo font bumped to 30px (mobile 22px) Kalam 700 — distinct brand mark. Weekly main title simplified to `Week N` only (removed `Month · ` prefix); `monthName` variable cleaned up. Build: 45 modules, 0 TS errors.
+- **Logo alignment polish (2026-05-28):** Applied browser-preview visual refinements to `HeaderBar.tsx`. Bullet `•` span: `lineHeight` set to `'4px'` (was `1`) to collapse vertical space below the glyph. `Journal` span: `verticalAlign: 'bottom'` added to align text baseline with the bullet. Inner header row: desktop `padding` updated from `'18px 52px 0'` to `'18px 52px 10px'` — adds 10px bottom breathing room before the border-bottom hairline. No AC impact; purely visual polish.
+- **Re-review resolution (2026-05-28):** Decision A — keep 1048px max-width; story AC1/tasks updated to match epics. ViewHeader main title stays Inter (user decision — period header is UI chrome). HeaderBar stale 680px comment fixed to 1048px. Story approved and marked done.
 
 ### File List
 
-- `src/components/App.tsx` — added max-width 680px centred inner container; moved padding from bj-scroll outer to inner div; ViewMascot kept outside column; root height 100vh→100dvh; ViewMascot component + mascot imports removed
-- `src/components/ViewHeader.tsx` — changed period title fontFamily to Kalam (`var(--bj-font)`), fontWeight to 700; exhaustiveness guard added to viewTitle switch; dead justifyContent removed; weekly label rewritten
-- `src/components/HeaderBar.tsx` — inner content wrapped in maxWidth 680 column container; outer header stays full-bleed
+- `src/components/App.tsx` — added max-width 1048px centred inner container; moved padding from bj-scroll outer to inner div; ViewMascot kept outside column; root height 100vh→100dvh; ViewMascot component + mascot imports removed; width:100% added
+- `src/components/ViewHeader.tsx` — period title uses Inter (UI chrome); exhaustiveness guard added to viewTitle switch; dead justifyContent removed; weekly label rewritten; removed month prefix from weekly main title (now "Week N" only); unused monthName variable removed
+- `src/components/HeaderBar.tsx` — inner content wrapped in maxWidth 1048 column container; outer header stays full-bleed; horizontal padding 52px matches body column; logo font size bumped to 30px (mobile 22px); width:100% and boxSizing added; stale 680px comment corrected to 1048px
 - `_bmad-output/planning-artifacts/epics.md` — breakpoint updated from < 640px to < 768px
 
 ### Review Findings
@@ -228,3 +245,22 @@ Code review run on 2026-05-28. 3 adversarial layers (Blind Hunter, Edge Case Hun
 - [x] [Review][Defer] Inner content gets stacked padding (`28px 52px` + `0 10px` on `.bj-list` and composer) [src/components/App.tsx:102,108,125] — deferred, minor design polish
 
 **Dismissed as noise (5):** HeaderBar exposing view on mobile (desktop tabs hidden on mobile — false positive); `onResolve` closure inside unreachable migration branch; exact 768px boundary "flicker" (well-defined boundary, intentional); `var(--bj-ink)` no fallback (defined on parent `.bj-app`); inner container at 680–767px viewports (minor, edge of acceptable).
+
+### Review Findings (Re-review 2026-05-28)
+
+Three adversarial layers re-run after post-review fixes. Build clean (45 modules, 0 TS errors). **2 patch, 1 decision-needed, 1 defer, 4 dismissed.**
+
+**Decision needed:**
+
+- [x] [Review][Decision-resolved] **Story AC vs epics/code on max-width** → **A: keep 1048px**. Story AC1 and tasks updated to ~1048px to match epics + code.
+
+**Patches:**
+
+- [x] [Review][Dismissed] **ViewHeader main title uses Inter** — user confirmed Inter is correct for period header title; AC2 updated accordingly (Kalam on entry text/symbols only).
+- [x] [Review][Patch] **Stale 680px comment in HeaderBar** — comment updated to 1048px [`HeaderBar.tsx:29`].
+
+**Deferred:**
+
+- [x] [Review][Defer] **Header tabs may overflow at narrow desktop (768–900px)** [`HeaderBar.tsx:30-66`] — deferred, low priority polish; no horizontal scroll or label truncation guard
+
+**Dismissed as noise (4):** ViewHeader `sup` hardcodes Inter string vs `var(--bj-ui-font)` (correct family, token consistency only); sort comment vs comparator direction (pre-existing, documented in prior defer list); Google Fonts CDN latency (pre-existing, working); `100dvh` without `100vh` fallback (accepted modern baseline).

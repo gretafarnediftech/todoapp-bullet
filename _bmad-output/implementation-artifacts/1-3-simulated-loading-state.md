@@ -23,10 +23,10 @@ so that I understand the app is working and data is on its way.
   - [x] Export `isLoading` from the hook return value
   - [x] Clean up timeout on unmount
 
-- [x] **Add skeleton variant to `LoadingState`** (AC: 1, 2)
-  - [x] Add `skeleton` variant with animated skeleton lines (Tailwind `animate-pulse`, ivory/dim colours via `var(--bj-soft)`)
+- [x] **Set `bullets` as default variant in `LoadingState`** (AC: 1, 2)
+  - [x] Animation cycles through `. - >` symbols with scale+rotate entrance, 380ms interval
   - [x] Keep existing "Fetching the page…" copy (Kalam, 18px)
-  - [x] Use `skeleton` as the default variant for the entry list loading state
+  - [x] Use `bullets` as the default variant for the entry list loading state
 
 - [x] **Wire loading state in `App.tsx`** (AC: 1, 3, 4)
   - [x] Pass `isLoading` from `useEntries` into `BuJoApp`
@@ -59,7 +59,7 @@ This is a **brownfield story**. `LoadingState.tsx` already exists with `bullets`
 - Simulated 400ms async load in `useEntries` with `isLoading` flag
 - LoadingState shown in entry list area during load
 - Composer disabled during load
-- Skeleton lines variant (epic Design Decision: CSS `animate-pulse` with ivory/dim colours)
+- `bullets` as default variant — cycling `. - >` with scale+rotate entrance animation
 
 ### Actual Component Names (Reminder)
 
@@ -96,11 +96,9 @@ isLoading  → LoadingState
 
 EmptyState must NOT show while `isLoading === true` (Story 1.4 AC also references this).
 
-### Skeleton Variant Design
+### Bullets Variant Design
 
-Epic Design Decision: skeleton lines use Tailwind `animate-pulse` with ivory/dim colours. Mimic entry row layout (glyph column + text line) with 3–4 placeholder rows of varying widths.
-
-Use `var(--bj-soft)` for skeleton fill colour — adapts in dark mode automatically.
+Default variant. Cycles through `. - >` symbols (ASCII period, dash, greater-than) with the existing `bj-load-pop` scale+rotate entrance animation at 380ms interval. Renders at 60px Kalam bold, `var(--bj-ink)` colour. Each character has a per-frame `size` and vertical `dy` offset for visual balance.
 
 ### Tech Stack (confirmed from Story 1.1)
 - React 18.3.1 + TypeScript 5.7.3 + Vite 5.4 + Tailwind CSS 3.4 (via PostCSS)
@@ -145,7 +143,7 @@ claude-sonnet-4-6
 ### Completion Notes List
 
 - **Task 1 (useEntries loading):** Added `isLoading` state starting `true` on mount. Initial entries array is empty; `loadEntries()` runs after a 400ms `setTimeout`. Timeout is cleared on unmount. `isLoading` exported from hook return.
-- **Task 2 (LoadingState skeleton):** Added `LoadingSkeleton` component with 4 animated placeholder rows (glyph + text line) using Tailwind `animate-pulse` and `var(--bj-soft)`. Set `skeleton` as the default variant. Existing bullets/pulse/dots variants preserved.
+- **Task 2 (LoadingState bullets default):** `bullets` variant set as default. `LOAD_FRAMES` updated to cycle `. - >` (period, dash, greater-than). Skeleton variant preserved but not used in production flow.
 - **Task 3 (App wiring):** `BuJoApp` receives `isLoading` via spread from `useEntries`. Render priority: LoadingState → EmptyState → entry list. Header and tabs remain visible during load.
 - **Task 4 (Composer disabled):** Added `disabled?: boolean` prop. When disabled, composer uses reduced opacity, `pointer-events: none`, and `disabled` on input/glyph button.
 - **Task 5 (verify):** `npm run build` exit 0. No linter errors on changed files. No test framework present — build serves as verification gate.
@@ -155,14 +153,15 @@ claude-sonnet-4-6
 - `src/hooks/useEntries.ts` — isLoading state, 400ms deferred loadEntries on mount
 - `src/components/App.tsx` — LoadingState render branch, isLoading prop, disabled Composer
 - `src/components/Composer.tsx` — disabled prop with non-interactive styling; passes disabled to WhenChip and submit
-- `src/components/states/LoadingState.tsx` — skeleton variant as default
-- `src/styles/bj.css` — skeleton line CSS classes
+- `src/components/states/LoadingState.tsx` — `LOAD_FRAMES` updated to `. - >`; `bullets` as default variant
+- `src/styles/bj.css` — skeleton CSS classes removed
 - `src/components/pickers/DatePicker.tsx` — WhenChip disabled prop; all trigger/clear buttons respect disabled
 
 ### Change Log
 
 - 2026-05-28: Story 1.3 implemented — simulated 400ms loading state with skeleton lines and disabled Composer
 - 2026-05-28: Patch — added `disabled` prop to `WhenChip`; WhenChip buttons and submit button now non-interactive (keyboard + mouse) during loading
+- 2026-05-28: Correct course — loading animation changed from skeleton lines to `. - >` symbol cycling (`bullets` variant); skeleton CSS removed from `bj.css`
 
 ### Review Findings
 

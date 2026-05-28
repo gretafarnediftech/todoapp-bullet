@@ -1,0 +1,23 @@
+---
+description: Ricorda di eseguire correct course dopo ogni story completata per mantenere le specs sincronizzate con il codice
+alwaysApply: true
+---
+
+# BMad: Aggiorna le Specs Dopo Ogni Story
+
+Quando una story viene marcata con status `review` (al termine di `bmad-dev-story`), proponi sempre di eseguire `correct course` per verificare se le specs devono essere aggiornate.
+
+## Quando applicare
+
+- Alla fine di ogni esecuzione di `bmad-dev-story`, prima di chiudere il workflow
+- Ogni volta che una patch o fix introduce cambiamenti non previsti nelle AC, nell'architettura o nel PRD
+
+## Come procedere
+
+1. Chiedi all'utente se durante l'implementazione sono emersi cambiamenti rispetto alle specs originali (AC, architettura, UX, PRD)
+2. Se sì → avvia `bmad-correct-course` per analizzare l'impatto e proporre le modifiche necessarie
+3. Se no → conferma che le specs sono già allineate e suggerisci la story successiva
+
+## Esempio di prompt al completamento
+
+> "Story completata e marcata 'review'. Sono emersi cambiamenti rispetto alle specs originali? Se sì, posso avviare `correct course` per aggiornarle."

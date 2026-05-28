@@ -53,7 +53,6 @@ This is a **verification/polish story**. `EmptyState.tsx` exists and is wired in
 
 **Potential gaps to verify:**
 - Epic AC says secondary line uses Inter; confirm `.bj-empty-lead` uses `var(--bj-ui-font)` not Kalam
-- FilterBar (Story 4.2) will affect "after any active filters" — when filters hide all entries, EmptyState should still show (wire in 4.2, not here)
 
 ### Actual Component Names
 
@@ -105,6 +104,18 @@ N/A — brownfield verification story; no code changes required.
 - [x] [Review][Dismiss] `.bj-empty-h bj-write` redundant with `.bj-empty-h` sizing — intentional Kalam on primary heading per AC #2.
 
 **AC audit:** #1 wiring OK · #2 per-view `THING_LABEL` + Inter lead via body/`bj-empty-lead` · #3 Notebook + DownArrow CTA · #4 guarded by `isLoading` · #5 guarded by `hasError`. **Approve** pending story housekeeping (check tasks, fill Dev Agent Record).
+
+---
+
+**Review Round 2 — 2026-05-28 (Blind Hunter + Edge Case Hunter + Acceptance Auditor)**
+
+- [x] [Review][Patch] `THING_LABEL[view]` renders `undefined` if `EntryView` extends without updating the map [`src/components/states/EmptyState.tsx:16`] — added `?? 'item'` fallback
+- [x] [Review][Patch] Decorative SVGs not hidden from assistive technology [`src/components/states/EmptyState.tsx:14,17`] — added `aria-hidden="true"` to `<Notebook>` and `<DownArrow>` wrappers
+- [x] [Review][Patch] EmptyState transition not announced to screen readers [`src/components/states/EmptyState.tsx:13`] — added `role="status"` and `aria-live="polite"` to `bj-empty` container
+- [x] [Review][Defer] `entries` null/undefined crash before `isLoading` guard [`src/components/App.tsx:99`] — deferred, pre-existing; `useEntries` always initialises to `[]`
+- [x] [Review][Defer] `e.ago` NaN/undefined produces non-deterministic sort [`src/components/App.tsx:100`] — deferred, pre-existing; `useEntries` always writes `ago: 0` on creation
+- [x] [Review][Defer] `isLoading && hasError` simultaneously makes ErrorState unreachable [`src/components/App.tsx:160-163`] — deferred, pre-existing; `useEntries` state machine concern
+- [x] [Review][Defer] `visible` filter scope limited to view only — AC1 "after active filters" not yet composed [`src/components/App.tsx:99-101`] — deferred, explicitly scoped to Story 4.2 in Dev Notes
 
 ### File List
 

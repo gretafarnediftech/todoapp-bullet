@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import type { EntryView, MigDecisionKind } from '../types/entry'
+import { useState, useEffect, useRef } from 'react'
+import type { EntryView, MigDecisionKind, MigrationItem } from '../types/entry'
 import { MIGRATION_QUEUE } from '../data/seed'
-import { useEntries, unresolvedFromPreviousPeriod } from '../hooks/useEntries'
+import { useEntries, unresolvedFromPreviousPeriod, startOfThisWeek, startOfThisMonth } from '../hooks/useEntries'
 import { useTheme } from '../hooks/useTheme'
 import { useTimeReminder } from '../hooks/useTimeReminder'
 
@@ -16,6 +16,32 @@ import { LegendModal } from './LegendModal'
 import { EmptyState } from './states/EmptyState'
 import { LoadingState } from './states/LoadingState'
 import { ErrorState } from './states/ErrorState'
+
+// ─── Ritual trigger rules ─────────────────────────────────────
+
+const LAST_OPEN_KEY = 'bj-last-open'
+
+/**
+ * Returns true if the ritual for this view should be offered this session.
+ * - Daily:   any day (boundary is "createdAt before today's midnight")
+ * - Weekly:  today is Monday, OR this is the first app-open of the week
+ *            (handles the gap case: last opened before this week started)
+ * - Monthly: today is the 1st, OR this is the first app-open of the month
+ */
+function shouldFireRitualForView(view: EntryView, prevLastOpen: number): boolean {
+  switch (view) {
+    case 'daily': return true
+    case 'weekly': {
+      const isMonday = ((new Date().getDay() + 6) % 7) === 0
+      return isMonday || prevLastOpen < startOfThisWeek()
+    }
+    case 'monthly': {
+      return new Date().getDate() === 1 || prevLastOpen < startOfThisMonth()
+    }
+    default: return false
+  }
+}
+
 // ─── BuJoApp ──────────────────────────────────────────────────
 interface BuJoAppProps {
   mobile: boolean
@@ -40,6 +66,34 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
   const [migrationOpen, setMigrationOpen] = useState<null | 'reminder' | 'ritual'>(null)
   const [legendOpen, setLegendOpen] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
+  // Stable queue captured at the moment the ritual modal opens
+  const [ritualQueue, setRitualQueue] = useState<MigrationItem[]>([])
+
+  // Read previous last-open date on mount (before overwriting it)
+  // so gap detection ("first open of week/month") works correctly
+  const prevLastOpen = useRef(0)
+  useEffect(() => {
+    const raw = localStorage.getItem(LAST_OPEN_KEY)
+    prevLastOpen.current = raw ? parseInt(raw, 10) : 0
+    localStorage.setItem(LAST_OPEN_KEY, Date.now().toString())
+  }, [])
+
+  // Track which views have already shown their ritual this session
+  const shownRitualViews = useRef<Set<EntryView>>(new Set())
+
+  // Navigation-triggered ritual: fires on first entry to each view per session
+  useEffect(() => {
+    if (isLoading || view === 'backlog') return
+    if (shownRitualViews.current.has(view)) return
+    if (!shouldFireRitualForView(view, prevLastOpen.current)) return
+
+    const unresolved = unresolvedFromPreviousPeriod(entries, view)
+    if (unresolved.length === 0) return
+
+    shownRitualViews.current.add(view)
+    setRitualQueue(unresolved)
+    setMigrationOpen('ritual')
+  }, [view, isLoading, entries])
 
   // Sort: oldest at top, newest at bottom (BuJo page fill direction)
   const visible = entries
@@ -48,20 +102,18 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
 
   const pad = mobile ? '14px 16px' : '28px 52px'
 
-  // Active tasks in the current period (not backlog) — drives 18:00 banner condition
+  // Active tasks in the current period — drives 18:00 banner condition
   const activePeriodTasks = view !== 'backlog'
     ? entries.filter((e) => e.view === view && e.type === 'task' && e.status === 'active')
     : []
 
-  // Unresolved tasks from the previous period — drives 00:01 ritual condition
-  const unresolvedPrev = unresolvedFromPreviousPeriod(entries, view)
-  // Use real previous-period tasks if available; fall back to MIGRATION_QUEUE for demo
-  const ritualQueue = unresolvedPrev.length > 0 ? unresolvedPrev : MIGRATION_QUEUE
-
-  useTimeReminder(
-    () => { if (activePeriodTasks.length > 0) setShowBanner(true) },
-    () => { if (unresolvedPrev.length > 0) setMigrationOpen('ritual') },
-  )
+  useTimeReminder(() => {
+    if (activePeriodTasks.length > 0) {
+      setShowBanner(true)
+      return true
+    }
+    return false
+  })
 
   return (
     <div
@@ -94,9 +146,6 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
 
       {/* Scrollable content */}
       <div
-        role="tabpanel"
-        id="tabpanel-main"
-        aria-labelledby={`tab-${view}`}
         className="bj-scroll"
         style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', zIndex: 1 }}
       >
@@ -174,8 +223,7 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
           queue={migrationOpen === 'ritual' ? ritualQueue : MIGRATION_QUEUE}
           onClose={() => setMigrationOpen(null)}
           onResolve={(decisions: Record<string, MigDecisionKind>) => {
-            const q = migrationOpen === 'ritual' ? ritualQueue : MIGRATION_QUEUE
-            resolveMigration(decisions, q)
+            resolveMigration(decisions, migrationOpen === 'ritual' ? ritualQueue : MIGRATION_QUEUE)
           }}
         />
       )}

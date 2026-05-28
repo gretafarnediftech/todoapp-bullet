@@ -23,33 +23,36 @@ export function HeaderBar({ mobile, view, onChangeView, isDark, onToggleDark, on
   return (
     <header style={{
       flexShrink: 0,
-      borderBottom: mobile ? 'none' : '1px solid var(--bj-rule)',
+      borderBottom: '1px solid var(--bj-rule)',
       marginBottom: mobile ? 0 : 4,
     }}>
-      {/* Inner column constrained to match body 680px column */}
+      {/* Inner column constrained to match body 1048px column */}
       <div style={{
         maxWidth: 1048,
         margin: '0 auto',
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
-        padding: mobile ? '12px 16px 4px' : '18px 0 0',
+        padding: mobile ? '12px 16px 4px' : '18px 52px 10px',
+        boxSizing: 'border-box',
         gap: 12,
       }}>
         {/* Logo */}
         <div className="bj-logo" style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
           <span style={{
             fontFamily: 'var(--bj-font)',
-            fontSize: mobile ? 18 : 20,
+            fontSize: mobile ? 22 : 30,
             fontWeight: 700,
-            lineHeight: 1,
+            lineHeight: '4px',
             opacity: 0.9,
           }}>•</span>
           <span style={{
             fontFamily: 'var(--bj-font)',
-            fontSize: mobile ? 18 : 20,
+            fontSize: mobile ? 22 : 30,
             fontWeight: 700,
             letterSpacing: -0.2,
             opacity: 0.9,
+            verticalAlign: 'bottom',
           }}>Journal</span>
         </div>
 

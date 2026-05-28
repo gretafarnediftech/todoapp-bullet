@@ -89,7 +89,6 @@ App
 ├── AppHeader                 [app title + current date/period label]
 ├── ViewTabs                  [tab navigation: Daily / Weekly / Monthly / Backlog]
 ├── MigrationPrompt           [conditional: shown on open if unresolved tasks exist]
-├── FilterBar                 [toggle: hide completed | hide notes]
 ├── EntryList                 [main content area]
 │   ├── LoadingState          [shown while isLoading === true]
 │   ├── ErrorState            [shown while hasError === true]
@@ -136,12 +135,6 @@ App
 - Props: `colorMode: 'bw' | 'color'`, `activeTheme: ThemeKey`, `onChange: (mode, theme) => void`
 - States: B&W active, Colour active + palette selection visible
 
-### `FilterBar`
-- Two toggle buttons: "Hide completed" | "Hide notes".
-- Visually compact. Positioned between ViewTabs and EntryList.
-- Props: `showCompleted: boolean`, `showNotes: boolean`, `onToggleCompleted: () => void`, `onToggleNotes: () => void`
-- States: each toggle on/off
-
 ### `MigrationPrompt`
 - Banner or inline modal. Shown on app open when unresolved tasks exist from previous period.
 - Displays a list of unresolved tasks, one at a time or all at once.
@@ -157,9 +150,9 @@ App
 
 ### `BulletEntry`
 - Single entry row. Contains symbol, text, timestamp, and actions.
-- Completed entries: text opacity 45%, symbol = animated SVG X.
-- Migrated entries: `>` symbol, text opacity 45%.
-- Scheduled entries: `<` symbol, text opacity 45%.
+- Completed entries: text opacity 28% (dim), symbol = animated SVG X — no strikethrough.
+- Migrated entries: `>` symbol, text opacity 28% (dim).
+- Scheduled entries: `<` symbol, text opacity 28% (dim).
 - Props: `entry: Entry`, `onComplete`, `onMigrate`, `onSchedule`, `onDelete`
 - States: default, hover (shows delete action), completed, migrated, scheduled
 
@@ -171,9 +164,10 @@ App
 - Props: `symbol: SymbolType`, `animated?: boolean`, `onClick?: () => void`
 - States: task (interactive), completed (animated SVG), migrated / scheduled / event / note (static)
 
-### `EntryText`
+### `EntryText` (implemented as text span inside `EntryRow`)
 - Displays the entry text.
-- Line-through + opacity 45% when entry is completed, migrated, or scheduled.
+- Opacity 28% when entry is completed, migrated, or scheduled — no strikethrough on dim text.
+- Strikethrough only for `originalText` when an entry was edited (per `bujo-design-spec.md`).
 - Props: `text: string`, `dimmed?: boolean`
 
 ### `EntryTimestamp`
@@ -349,7 +343,6 @@ todo-app/
 │       ├── AppHeader.tsx
 │       ├── ViewTabs.tsx
 │       ├── ThemeSwitcher.tsx
-│       ├── FilterBar.tsx
 │       ├── MigrationPrompt.tsx
 │       ├── EntryList.tsx
 │       ├── BulletEntry.tsx

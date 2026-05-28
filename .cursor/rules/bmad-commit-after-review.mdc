@@ -1,0 +1,44 @@
+---
+description: Esegui un commit git al termine di ogni code review approvata o dopo aver risolto i follow-up di review
+alwaysApply: true
+---
+
+# BMad: Commit Dopo la Review
+
+Dopo che una story supera la review (status passa da `review` a `done`), esegui sempre un commit git con un messaggio descrittivo.
+
+## Quando applicare
+
+- Dopo che `bmad-code-review` approva la story (outcome: Approve)
+- Dopo aver risolto tutti i follow-up di review (`[AI-Review]`) e la story è pronta per essere chiusa
+- Dopo aver eseguito `correct course` e aggiornato le specs
+
+## Come procedere
+
+1. Verifica che tutti i test passino (`run full test suite`)
+2. Esegui `git add` dei file modificati elencati nel File List della story
+3. Crea il commit con messaggio nel formato:
+
+```
+feat|fix|chore(story-key): descrizione breve
+
+- AC soddisfatti: elenco sintetico
+- File modificati: N file
+```
+
+4. Conferma all'utente il commit creato e suggerisci la story successiva
+
+## Esempio di messaggio commit
+
+```
+feat(1-1-app-scaffold): implementato layout shell con navigazione
+
+- Scaffold app React con routing base
+- Layout shell con sidebar e header
+- 12 file modificati
+```
+
+## Note
+
+- Non fare push automatico — solo commit locale, salvo istruzione esplicita dell'utente
+- Se ci sono file non tracciati non correlati alla story, non includerli nel commit

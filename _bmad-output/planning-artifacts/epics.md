@@ -25,11 +25,10 @@ FR3: User can mark a task as completed (· → X) triggering an SVG hand-drawn a
 FR4: User can mark a task as migrated (· → >) and choose a destination view via a "When?" prompt
 FR5: User can mark a task as scheduled to backlog (· → <), moving it to the Backlog view
 FR6: User can permanently delete any entry from the current view
-FR7: At 18:00, if unresolved tasks exist in the current period, a non-blocking end-of-day reminder banner is shown immediately (even if the app is already open). At 00:01, a blocking migration ritual modal is shown immediately in-session, preventing further interaction until the user resolves or dismisses all unresolved tasks.
-FR8: User can toggle visibility of completed tasks and notes independently via a filter bar
+FR7: At 18:00, if unresolved tasks exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view). On first navigation into a period view in a session, if unresolved tasks from the previous period exist and the view's ritual window is open (Daily: any day; Weekly: Monday or first app-open of the week; Monthly: 1st of month or first app-open of the month), a blocking migration prompt fires — preventing further interaction until all tasks are resolved.
 FR9: User can switch between B&W mode (default) and Colour mode with 4–5 fixed preset palettes
 FR10: Each entry displays a symbol (bullet key), text, and an optional formatted `when` label (time or date) when the entry has a scheduled time — no relative creation timestamp
-FR11: App displays an empty state when no entries exist in the current view after filtering
+FR11: App displays an empty state when no entries exist in the current view
 FR12: App displays a loading state on initial data fetch (simulated 400ms delay)
 FR13: App displays an error state when data retrieval fails (simulated), with a retry action
 
@@ -61,13 +60,12 @@ UX-DR4: No relative creation timestamp on entries — entries display symbol + t
 UX-DR5: Tab navigation — horizontal tab bar with icon + label (Inter) per tab; icons: ✦ Daily, ≡ Weekly, ⊞ Monthly, ≡ Future Log
 UX-DR6: MigrationPrompt — modal/banner for unresolved tasks from previous day, week, OR month
 UX-DR7: ThemeSwitcher — Light/Dark toggle (sun/moon icon, top-right); dark mode applies grain/noise CSS texture
-UX-DR8: FilterBar — two independent toggles: "Hide completed" and "Hide notes"
 UX-DR9: EntryInput inline as the last row of the list — renders as `· Write a task...` placeholder, not a separate sticky form
 UX-DR10: All interactive elements implement hover, active, and disabled states (buttons, tabs, bullets, toggles)
 UX-DR11: Mobile layout: full-screen list, tab navigation visible at top
 UX-DR12: Desktop layout: centred container (max-width ~1048px), horizontal tabs above the list
 UX-DR13: EmptyState — contextualised message per view + visual CTA
-UX-DR14: LoadingState — animated skeleton lines in BuJo style within EntryList
+UX-DR14: LoadingState — `. - >` symbol cycling animation (bullets variant, 380ms) within EntryList
 UX-DR15: ErrorState — message + "Try again" retry button, wired to `retryLoad`
 UX-DR16: Logo `• Journal` top-left — bullet character + wordmark, both Kalam bold; period header = small label (Inter small caps) + large title (Kalam bold) + squiggle SVG underline
 UX-DR17: Decorative doodle SVG per view (bottom-right): frog (Daily), rocket (Weekly), tree (Monthly), mountains (Future Log) — _deferred to polish pass, currently hidden_
@@ -81,7 +79,6 @@ FR4: Epic 3 — Task migration with "When?" prompt (EntryActions)
 FR5: Epic 3 — Task scheduling to backlog (EntryActions)
 FR6: Epic 2 — Entry deletion via EntryActions
 FR7: Epic 4 — Migration ritual prompt on app open (MigrationPrompt)
-FR8: Epic 4 — FilterBar toggles (hide completed / hide notes)
 FR9: Epic 5 — ThemeSwitcher (B&W / Colour mode)
 FR10: Epic 2 — Entry display: symbol + text + optional `when` label (EntryRow)
 FR11: Epic 1 — EmptyState component within EntryList
@@ -104,9 +101,9 @@ Users can create new entries, view the full list of entries for the active view,
 Users can change the state of a task — completing it with a hand-drawn X animation, migrating it with a destination prompt, or scheduling it to the Backlog.
 **FRs covered:** FR3, FR4, FR5
 
-### Epic 4: Migration Ritual & Filters
-Users are guided through the migration ritual when opening the app after an unresolved period, and can filter the list to hide completed items or notes.
-**FRs covered:** FR7, FR8
+### Epic 4: Migration Ritual
+Users are guided through the migration ritual when opening the app after an unresolved period.
+**FRs covered:** FR7
 
 ### Epic 5: Visual Theme & Colour Modes
 Users experience the full BuJo visual theme (Kalam font, ivory background, dot grid) and can switch between B&W and Colour modes with preset palettes.
@@ -185,7 +182,7 @@ So that I understand the app is working and data is on its way.
 **Then** the LoadingState is replaced by the actual entry list (or EmptyState if no entries)
 
 **Design Decisions:**
-- Skeleton lines use CSS `animate-pulse` (Tailwind) with ivory/dim colours
+- Loading animation cycles through `. - >` symbols with scale+rotate entrance (380ms interval, `bullets` variant)
 - `useEntries` sets `isLoading = true` on mount, resolves after 400ms with mock data
 
 ---
@@ -361,7 +358,7 @@ So that I can reschedule work following the BuJo migration ritual.
 **When** the EntryActions appear and I click/tap "Migrate"
 **Then** an inline "When?" prompt appears with four options: Today (Daily), This Week (Weekly), This Month (Monthly), Backlog
 **When** I select a destination
-**Then** the current entry's symbol changes to `>` and its text opacity reduces to 45%
+**Then** the current entry's symbol changes to `>` and its text opacity reduces to 28% (dim, no strikethrough)
 **And** the entry remains visible in the current view with the `>` symbol
 **And** a new task entry (symbol = `·`) is created in the destination view with the same text
 **And** the "When?" prompt closes
@@ -408,7 +405,7 @@ So that I can defer open-ended tasks without specifying an exact date.
 
 **Given** I hover over a task entry (symbol = `·`)
 **When** the EntryActions appear and I click/tap "Schedule to Backlog"
-**Then** the current entry's symbol changes to `<` and its text opacity reduces to 45%
+**Then** the current entry's symbol changes to `<` and its text opacity reduces to 28% (dim, no strikethrough)
 **And** the entry remains visible in the current view with the `<` symbol
 **And** a new task entry (symbol = `·`) is created in the Backlog view with the same text
 **And** the action is immediate with no additional prompt
@@ -420,15 +417,15 @@ So that I can defer open-ended tasks without specifying an exact date.
 
 ---
 
-## Epic 4: Migration Ritual & Filters
+## Epic 4: Migration Ritual
 
-At 18:00, users are reminded to deal with unresolved tasks via a non-blocking banner. At 00:01, a blocking modal prevents further interaction until tasks are resolved. Users can also filter the active view to hide completed tasks or notes.
+At 18:00, users are reminded to deal with unresolved tasks via a non-blocking banner. On first navigation into a period view (Daily/Weekly/Monthly), a blocking migration ritual fires if the view's period window is open and unresolved tasks exist from the previous period — preventing further interaction until tasks are resolved.
 
-### Story 4.1: Migration Ritual — Time-Triggered Banner & Blocking Prompt
+### Story 4.1: Migration Ritual — Evening Banner & Per-View Blocking Prompt
 
 As a user,
-I want to be reminded at 18:00 to deal with unresolved tasks before the day ends, and be required to act on them at 00:01,
-So that I consciously close out each day following the BuJo ritual — whether I'm actively using the app or not.
+I want to be reminded at 18:00 to deal with unresolved tasks before the day ends, and be required to deal with them when I next open a period view,
+So that I consciously close out each period following the BuJo ritual — whether I'm actively using the app or not.
 
 **Acceptance Criteria:**
 
@@ -443,13 +440,17 @@ So that I consciously close out each day following the BuJo ritual — whether I
 **And** the banner has a dismiss (×) button — clicking it hides the banner for the session
 **And** the banner is not shown if there are no active tasks in the current period
 
-**--- 00:01 TRIGGER (blocking modal) ---**
+**--- NAVIGATION TRIGGER (blocking modal, per view) ---**
 
-**Given** the app is open (or is opened) at or after 00:01
-**When** there are active `task` entries from the previous period (yesterday's Daily, last week's Weekly, last month's Monthly)
-**Then** the `MigrationPrompt` modal opens immediately and blocks all interaction — no dismiss, no "Maybe later"
+**Given** the user navigates into a period view (Daily, Weekly, or Monthly) for the first time in a session
+**And** the view's ritual window is open:
+  - Daily: any day (ritual fires if there are unresolved tasks from before today's midnight)
+  - Weekly: today is Monday, OR this is the first app-open since this week started (Monday)
+  - Monthly: today is the 1st, OR this is the first app-open since this month started
+**When** there are active `task` entries from the previous period for that view (yesterday's Daily, last week's Weekly, last month's Monthly)
+**Then** the `MigrationPrompt` modal opens immediately for that view's queue and blocks all interaction — no dismiss, no "Maybe later"
 **And** the modal title is **"The morning ritual"** with section header **"Yesterday's leftovers"** (or week/month equivalent)
-**And** each unresolved task shows three action buttons: **"today"**, **"future"**, **"drop"**
+**And** each unresolved task shows action buttons: **done (×)**, **today**, **migrate (→ submenu)**, **drop**
 **And** a badge shows **"N left"** (count of unresolved tasks)
 **And** the modal can only be closed once every task has been actioned
 **When** I click "today" on a task
@@ -459,46 +460,24 @@ So that I consciously close out each day following the BuJo ritual — whether I
 **When** I click "drop" on a task
 **Then** the task is permanently removed from the previous period's view
 **And** once all tasks are actioned, the modal closes automatically
-**And** if there are no unresolved tasks from the previous period at 00:01, the modal is not shown
+**And** if there are no unresolved tasks for that view's previous period, the modal is not shown
+**And** each view's ritual fires independently — navigating from Daily to Weekly can trigger two separate rituals in the same session
 
 **Design Decisions:**
-- `useTimeReminder` hook (new) runs a `setInterval` every 60s, checking `new Date()` against the 18:00 and 00:01 thresholds
-- On crossing 18:00: sets `showBanner: true` in app state if active tasks exist in the current period
-- On crossing 00:01: sets `migrationOpen: 'ritual'` in app state if unresolved tasks exist from the previous period; fires immediately even mid-session
-- `unresolvedFromPreviousPeriod()` in `useEntries` — compares entry `view` + creation date against the previous calendar day/week/month
-- `EndOfPeriodBanner` renders above EntryList; shown when `showBanner === true`; dismissed via × only (sets `showBanner: false`, session only) — no "Review now" button
-- `MigrationPrompt` with `canDefer={false}` when opened by the 00:01 trigger — hides "Maybe later" and disables backdrop dismiss
-- Per-task actions: **today / future / drop**
-- Destination tags: "→ today", "→ next week", "→ future"
-- Both triggers use the existing `showBanner` / `migrationOpen` state shape in `App.tsx` — no new global state shape needed
-- A single interval-based hook isolates all time logic outside of component render cycles
-
----
-
-### Story 4.2: Filter Completed Tasks and Notes
-
-As a user,
-I want to hide completed tasks and/or notes from my current view,
-So that I can focus on what still needs to be done without distraction.
-
-**Acceptance Criteria:**
-
-**Given** a view has a mix of task, completed, and note entries
-**When** I look at the FilterBar below the ViewTabs
-**Then** I see two toggle buttons: "Hide completed" and "Hide notes" — both off by default
-**When** I toggle "Hide completed" on
-**Then** all entries with symbol = `completed`, `migrated`, or `scheduled` are hidden from the list
-**And** if no entries remain, the EmptyState is shown
-**When** I toggle "Hide notes" on
-**Then** all entries with symbol = `note` are hidden from the list
-**And** both toggles can be active simultaneously
-**When** I toggle either filter off
-**Then** the corresponding entries reappear instantly
-
-**Design Decisions:**
-- `showCompleted` and `showNotes` are boolean state in App, passed to FilterBar and EntryList
-- Filtering is purely presentational — entries are not deleted from state
-- Filter state resets on page reload (not persisted in v1 — deferred per Open Questions)
+- `useTimeReminder` hook handles the **18:00 banner only** — single `() => boolean` callback; the session flag is set only when the callback returns `true` (banner actually shown), so being in Backlog view at 18:00 does not consume the slot permanently
+- **Ritual trigger is navigation-based**: `useEffect([view, isLoading, entries])` in `BuJoApp` fires on first entry to each period view per session
+- `shouldFireRitualForView(view, prevLastOpen)` encodes per-view window rules:
+  - Daily: always true (boundary is `createdAt < startOfToday()`)
+  - Weekly: `isMonday || prevLastOpen < startOfThisWeek()`
+  - Monthly: `isFirstOfMonth || prevLastOpen < startOfThisMonth()`
+- `prevLastOpen`: read from `localStorage('bj-last-open')` on mount before overwriting — enables gap detection across app sessions (if last opened before this week/month started, ritual fires even on non-Monday/non-1st days)
+- `ritualQueue`: `useState<MigrationItem[]>` captured at modal-open time — never recomputed from live view state while modal is open
+- `shownRitualViews`: `useRef<Set<EntryView>>` — each view's ritual fires at most once per session
+- `unresolvedFromPreviousPeriod()` in `useEntries` — compares `entry.view` + `createdAt` against the period boundary (`startOfToday/ThisWeek/ThisMonth`)
+- `EndOfPeriodBanner` renders above EntryList; dismissed via × only (session only) — no "Review now" button
+- `MigrationPrompt` with `canDefer={false}` when opened by the navigation ritual — hides "Maybe later" and disables backdrop dismiss
+- Per-task actions: **done (×) / today / migrate (→ submenu) / drop**
+- Both banner and ritual use `showBanner` / `migrationOpen` state shape in `App.tsx` — no new global state shape needed
 
 ---
 

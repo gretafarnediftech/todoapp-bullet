@@ -12,7 +12,6 @@ function viewTitle(v: EntryView): { sup: string; main: string } {
       const mon = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow)
       const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6)
       const weekNum = Math.floor((mon.getDate() - 1) / 7) + 1
-      const monthName = mon.toLocaleDateString('en-GB', { month: 'long' })
       const wd = (d: Date) => d.toLocaleDateString('en-GB', { weekday: 'short' })
       const mo = (d: Date) => d.toLocaleDateString('en-GB', { month: 'short' })
       const crossesMonth = mon.getMonth() !== sun.getMonth()
@@ -21,7 +20,7 @@ function viewTitle(v: EntryView): { sup: string; main: string } {
       const sunLabel = `${wd(sun)} ${sun.getDate()} ${mo(sun)}${crossesYear ? ` ${sun.getFullYear()}` : ''}`
       if (crossesYear) monLabel += ` ${mo(mon)} ${mon.getFullYear()}`
       else if (crossesMonth) monLabel += ` ${mo(mon)}`
-      return { sup: `${monLabel} – ${sunLabel}`, main: `${monthName} · Week ${weekNum}` }
+      return { sup: `${monLabel} – ${sunLabel}`, main: `Week ${weekNum}` }
     }
     case 'monthly':
       return { sup: fmt({ year: 'numeric' }), main: fmt({ month: 'long' }) }
@@ -47,23 +46,23 @@ export function ViewHeader({ view, mobile, showDoodles = true }: ViewHeaderProps
       className="bj-vh"
       style={{
         display: 'flex', alignItems: 'flex-end',
-        gap: 16, padding: mobile ? '8px 0 14px' : '4px 0 20px',
-        borderBottom: '1px solid var(--bj-rule)',
+        gap: 16, padding: mobile ? '8px 0 14px' : '4px 0',
+        borderBottom: 'none',
         marginBottom: mobile ? 12 : 18,
       }}
     >
       <div>
         <div style={{
-          fontSize: mobile ? 10 : 11, opacity: 0.5, fontWeight: 500,
+          fontSize: mobile ? 10 : 11, opacity: 1, fontWeight: 600,
           letterSpacing: 1.2, textTransform: 'uppercase',
-          fontFamily: 'var(--bj-ui-font)',
+          fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
         }}>
           {sup}
         </div>
         <div style={{
-          fontSize: mobile ? 28 : 36, fontWeight: 700, lineHeight: 1.05,
+          fontSize: mobile ? 28 : 32, fontWeight: 700, lineHeight: 1.05,
           letterSpacing: -0.6, marginTop: 4,
-          fontFamily: 'var(--bj-font)',
+          fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
         }}>
           {main}
         </div>
