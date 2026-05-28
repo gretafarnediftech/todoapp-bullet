@@ -19,18 +19,20 @@ This document provides the complete epic and story breakdown for the BuJo Todo A
 
 ### Functional Requirements
 
-FR1: User can create a new entry (task, event, or note) in any view by selecting an entry type and typing text
+FR1: User can create a new entry (task or event) in any view by selecting an entry type and typing text
 FR2: User can navigate between four independent views: Daily, Weekly, Monthly, Backlog via tab navigation
 FR3: User can mark a task as completed (· → X) triggering an SVG hand-drawn animation
 FR4: User can mark a task as migrated (· → >) and choose a destination view via a "When?" prompt
-FR5: User can mark a task as scheduled to backlog (· → <), moving it to the Backlog view
+FR5: User can unmark a task as completed and revert it to the uncompleted status
 FR6: User can permanently delete any entry from the current view
-FR7: At 18:00, if unresolved tasks exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view). On first navigation into a period view in a session, if unresolved tasks from the previous period exist and the view's ritual window is open (Daily: any day; Weekly: Monday or first app-open of the week; Monthly: 1st of month or first app-open of the month), a blocking migration prompt fires — preventing further interaction until all tasks are resolved.
-FR9: User can switch between B&W mode (default) and Colour mode with 4–5 fixed preset palettes
-FR10: Each entry displays a symbol (bullet key), text, and an optional formatted `when` label (time or date) when the entry has a scheduled time — no relative creation timestamp
+FR7: At 18:00 local hour, if unresolved tasks exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view). 
+FR8: After midnight, on first navigation into a period view in a session, if unresolved tasks from the previous period exist and the view's ritual window is open (Daily: any day; Weekly: Monday or first app-open of the week; Monthly: 1st of month or first app-open of the month), a blocking migration prompt fires — preventing further interaction until all tasks are resolved.
+FR9: User can switch between dark and light mode. 
+FR10: Each entry displays a symbol, text, and an optional formatted `when` label (time or date) when the entry has a scheduled time
 FR11: App displays an empty state when no entries exist in the current view
-FR12: App displays a loading state on initial data fetch (simulated 400ms delay)
+FR12: App displays a loading state on initial data fetch (simulated 1000ms delay)
 FR13: App displays an error state when data retrieval fails (simulated), with a retry action
+FR14: User can unmark a task as migrated to tomorrow and revert it to the uncompleted status. 
 
 ### NonFunctional Requirements
 
@@ -56,9 +58,9 @@ NFR7: The prototype must feel production-ready despite minimal scope
 UX-DR1: Six BuJo symbols rendered correctly — `·` (task), animated SVG `×` (completed), `>` (migrated), `<` (scheduled), `○` (event), `–` (note)
 UX-DR2: Task completion animation — SVG `×` drawn via stroke-dashoffset in two sequential diagonal strokes (~150ms each)
 UX-DR3: Completed, migrated, and scheduled entries display text at 28% opacity (dim) — no strikethrough; strikethrough is reserved for `originalText` when an entry was edited
-UX-DR4: No relative creation timestamp on entries — entries display symbol + text; optional formatted `when` label (time/date) when scheduled; migrated entries additionally show `→ destination` tag in muted Inter text
+UX-DR4: Entries display symbol + text; optional formatted `when` label (time/date) when scheduled; migrated entries additionally show `→ destination` tag in muted Inter text
 UX-DR5: Tab navigation — horizontal tab bar with icon + label (Inter) per tab; icons: ✦ Daily, ≡ Weekly, ⊞ Monthly, ≡ Future Log
-UX-DR6: MigrationPrompt — modal/banner for unresolved tasks from previous day, week, OR month
+UX-DR6: MigrationPrompt — modal for unresolved tasks from previous day, week, OR month
 UX-DR7: ThemeSwitcher — Light/Dark toggle (sun/moon icon, top-right); dark mode applies grain/noise CSS texture
 UX-DR9: EntryInput inline as the last row of the list — renders as `· Write a task...` placeholder, not a separate sticky form
 UX-DR10: All interactive elements implement hover, active, and disabled states (buttons, tabs, bullets, toggles)
@@ -68,7 +70,8 @@ UX-DR13: EmptyState — contextualised message per view + visual CTA
 UX-DR14: LoadingState — `. - >` symbol cycling animation (bullets variant, 380ms) within EntryList
 UX-DR15: ErrorState — message + "Try again" retry button, wired to `retryLoad`
 UX-DR16: Logo `• Journal` top-left — bullet character + wordmark, both Kalam bold; period header = small label (Inter small caps) + large title (Kalam bold) + squiggle SVG underline
-UX-DR17: Decorative doodle SVG per view (bottom-right): frog (Daily), rocket (Weekly), tree (Monthly), mountains (Future Log) — _deferred to polish pass, currently hidden_
+UX-DR17: reminder banner 
+
 
 ### FR Coverage Map
 
@@ -76,14 +79,16 @@ FR1: Epic 2 — Entry creation via EntryInput + SymbolPicker
 FR2: Epic 1 — ViewTabs navigation and view-scoped rendering
 FR3: Epic 3 — Task completion with SVG animation (BulletSymbol)
 FR4: Epic 3 — Task migration with "When?" prompt (EntryActions)
-FR5: Epic 3 — Task scheduling to backlog (EntryActions)
+FR5: Epic 3 — Unmark task as completed, revert to active (BulletSymbol / EntryActions)
 FR6: Epic 2 — Entry deletion via EntryActions
-FR7: Epic 4 — Migration ritual prompt on app open (MigrationPrompt)
-FR9: Epic 5 — ThemeSwitcher (B&W / Colour mode)
+FR7: Epic 4 — End-of-period reminder banner at 18:00 (EndOfPeriodBanner)
+FR8: Epic 4 — Blocking migration ritual on period navigation (MigrationPrompt)
+FR9: Epic 5 — ThemeSwitcher (dark / light mode)
 FR10: Epic 2 — Entry display: symbol + text + optional `when` label (EntryRow)
 FR11: Epic 1 — EmptyState component within EntryList
-FR12: Epic 1 — LoadingState component + simulated 400ms delay in useEntries
+FR12: Epic 1 — LoadingState component + simulated 1000ms delay in useEntries
 FR13: Epic 1 — ErrorState component + retryLoad in useEntries
+FR14: Epic 3 — Unmark task as migrated to tomorrow, revert to active (EntryActions)
 
 ---
 
@@ -98,15 +103,15 @@ Users can create new entries, view the full list of entries for the active view,
 **FRs covered:** FR1, FR6, FR10
 
 ### Epic 3: Task State Transitions
-Users can change the state of a task — completing it with a hand-drawn X animation, migrating it with a destination prompt, or scheduling it to the Backlog.
-**FRs covered:** FR3, FR4, FR5
+Users can change the state of a task — completing it with a hand-drawn X animation, migrating it with a destination prompt, scheduling it to the Backlog, or reverting completed and migrated tasks back to active.
+**FRs covered:** FR3, FR4, FR5, FR14
 
 ### Epic 4: Migration Ritual
-Users are guided through the migration ritual when opening the app after an unresolved period.
-**FRs covered:** FR7
+Users are reminded at 18:00 about unresolved tasks and guided through the blocking migration ritual when navigating into a period view after an unresolved period.
+**FRs covered:** FR7, FR8
 
-### Epic 5: Visual Theme & Colour Modes
-Users experience the full BuJo visual theme (Kalam font, ivory background, dot grid) and can switch between B&W and Colour modes with preset palettes.
+### Epic 5: Visual Theme & Dark/Light Mode
+Users experience the full BuJo visual theme (Kalam font, ivory background, dot grid) and can switch between light and dark modes.
 **FRs covered:** FR9
 
 ---
@@ -127,7 +132,7 @@ So that I have a consistent visual container for all views and interactions.
 **When** the page loads
 **Then** I see the app title and a single-column centred layout (max-width ~1048px on desktop)
 **And** the Kalam font (Google Fonts) is loaded and applied to all text
-**And** the background is ivory/cream (#FAFAF7) with a subtle dot grid texture visible
+**And** the background is ivory/cream (#F5F4F0) with a subtle dot grid texture visible
 **And** on mobile (< 768px) the layout is full-width with appropriate horizontal padding
 **And** no errors appear in the browser console
 
@@ -174,16 +179,16 @@ So that I understand the app is working and data is on its way.
 **Acceptance Criteria:**
 
 **Given** I open the app
-**When** the initial data fetch begins (simulated 400ms delay in `useEntries`)
+**When** the initial data fetch begins (simulated 1000ms delay in `useEntries`)
 **Then** the EntryList area shows the LoadingState component with the message **"Fetching the page…"**
 **And** the LoadingState renders in the BuJo aesthetic (minimal, no generic spinner)
 **And** the EntryInput and tabs are visible but EntryInput is in disabled state
-**When** the 400ms delay resolves
+**When** the 1000ms delay resolves
 **Then** the LoadingState is replaced by the actual entry list (or EmptyState if no entries)
 
 **Design Decisions:**
 - Loading animation cycles through `. - >` symbols with scale+rotate entrance (380ms interval, `bullets` variant)
-- `useEntries` sets `isLoading = true` on mount, resolves after 400ms with mock data
+- `useEntries` sets `isLoading = true` on mount, resolves after 1000ms with mock data
 
 ---
 
@@ -228,7 +233,7 @@ So that I know something went wrong and can attempt to recover without refreshin
 **And** the error can be triggered via a dev toggle (e.g. `?error=1` query param)
 
 **Design Decisions:**
-- `retryLoad` in `useEntries` resets `hasError` and re-triggers the 400ms simulated load
+- `retryLoad` in `useEntries` resets `hasError` and re-triggers the 1000ms simulated load
 - Error state dev toggle: a small "Simulate error" button visible only in development
 
 ---
@@ -273,7 +278,7 @@ So that I can record tasks, events, and notes in my BuJo without friction.
 **When** I look at the bottom of the screen
 **Then** I see the EntryInput with a SymbolPicker (showing `·` by default) and a text field
 **When** I click the SymbolPicker
-**Then** a compact menu shows the three addable types: task (·), event (○), note (–)
+**Then** a compact menu shows the two addable types: task (·), event (○)
 **When** I select a type and type text in the text field then press Enter (or tap a submit button on mobile)
 **Then** the new entry appears immediately at the bottom of the current view's list (newest position)
 **And** the entry shows the correct symbol and the text I typed (no relative creation timestamp; optional `when` if set via picker)
@@ -331,11 +336,17 @@ So that completing a task feels satisfying and visually distinct from the paper 
 **And** the change is immediate — no server round-trip, no delay
 **And** the completed entry remains in the list (not removed) unless the "Hide completed" filter is active
 
+**Given** I see a completed entry with a `×` symbol
+**When** I click or tap the `×` bullet
+**Then** the symbol reverts to `·` and the entry text returns to full opacity
+**And** the reversal is immediate with no animation
+
 **Design Decisions:**
 - BulletSymbol uses SVG with `stroke-dasharray` + `stroke-dashoffset` animated via CSS `@keyframes`
 - Two `<line>` elements, each animated sequentially via `animation-delay`
 - Text styling on completion: `opacity: 0.28` on glyph and entry text only — no strikethrough; the right-side action icons (delete, migrate, etc.) must remain at full opacity regardless of completion state
 - `completeEntry(id)` updates the entry symbol to `completed` in `useEntries`
+- `uncompleteEntry(id)` in `useEntries` resets status to `active` and symbol to `task`
 
 **Event Completion Animation (Fix 3):**
 - Clicking the `○` (event) bullet marks the event as done
@@ -393,9 +404,22 @@ The original spec had all migrated entries remain in the source list with a `>` 
 - `undoMigration(id, sourceView, destinationView)` in `useEntries` handles the reversal
 - For "tomorrow" entries (the copy in Daily): no undo needed — the user can simply delete the future copy
 
+**Undo Tomorrow Migration (FR14):**
+
+**Given** I see an entry in the source view with a `>` symbol and `→ tomorrow` label
+**When** I click/tap the undo icon on that entry
+**Then** the `>` symbol reverts to `·` and the `→ tomorrow` label is removed
+**And** the corresponding future copy in the Daily view (tomorrow's date) is also deleted
+**And** the reversal is immediate with no additional prompt
+
+**Design Decisions:**
+- `undoTomorrowMigration(id)` in `useEntries` reverts the source entry to `active` / `task` symbol and removes the tomorrow copy from the Daily entries by matching `when` date + original text
+
 ---
 
 ### Story 3.3: Schedule a Task to Backlog
+
+> **Note:** This story is not tied to a dedicated FR but is required by UX-DR1 (`<` scheduled symbol) and the BuJo system logic. It is retained as a UX-driven story.
 
 As a user,
 I want to mark a task as scheduled (moved to the future log/backlog),
@@ -481,9 +505,9 @@ So that I consciously close out each period following the BuJo ritual — whethe
 
 ---
 
-## Epic 5: Visual Theme & Colour Modes
+## Epic 5: Visual Theme & Dark/Light Mode
 
-Users experience the complete BuJo visual theme throughout the app and can switch between B&W (default) and Colour modes, selecting from preset palettes.
+Users experience the complete BuJo visual theme throughout the app and can switch between light (default) and dark modes.
 
 ### Story 5.1: BuJo Visual Theme Applied
 
@@ -493,9 +517,9 @@ So that the aesthetic matches the calm, minimal, handwritten quality of a paper 
 
 **Acceptance Criteria:**
 
-**Given** I open the app in B&W mode (default)
+**Given** I open the app in light mode (default)
 **When** I look at the app
-**Then** the background is ivory/cream (#FAFAF7) with a visible but subtle dot grid texture
+**Then** the background is ivory/cream (#F5F4F0) with a visible but subtle dot grid texture
 **And** the Kalam font is applied at the correct weights: 300 for `when` labels/meta, 400 for body text, 700 for titles and symbols
 **And** all text is in near-black (#1A1A1A)
 **And** there are no heavy drop shadows, gradients, or decorative elements
@@ -508,27 +532,28 @@ So that the aesthetic matches the calm, minimal, handwritten quality of a paper 
 
 ---
 
-### Story 5.2: Switch Between B&W and Colour Mode
+### Story 5.2: Switch Between Light and Dark Mode
 
 As a user,
-I want to toggle between B&W and Colour modes and pick a palette,
-So that I can personalise the app's feel while keeping the BuJo aesthetic.
+I want to toggle between light and dark mode,
+So that I can use the app comfortably in different lighting conditions.
 
 **Acceptance Criteria:**
 
-**Given** the app is in B&W mode (default)
-**When** I click the ThemeSwitcher
-**Then** the app switches to Colour mode
-**And** 4–5 palette option dots are shown (each a small coloured circle)
-**When** I click a palette dot
-**Then** the app's accent colour updates instantly across all views (tabs, symbols, CTA elements)
-**And** the change applies globally — all four views use the same theme
-**When** I click the ThemeSwitcher again (back to B&W)
-**Then** the colour theme is removed and the app returns to pure black and white
+**Given** the app is in light mode (default)
+**When** I click the ThemeSwitcher (sun/moon icon)
+**Then** the app switches to dark mode
+**And** the background becomes near-black (#141414) with a CSS grain/noise texture
+**And** all text becomes off-white
+**And** the ThemeSwitcher icon updates to reflect the active mode
+**When** I click the ThemeSwitcher again
+**Then** the app returns to light mode (ivory background #F5F4F0, near-black text #1A1A1A, dot grid texture)
 **And** all transitions are immediate with no perceptible delay
+**And** the selected mode is persisted to localStorage and restored on next app open
 
 **Design Decisions:**
-- `useTheme` hook manages `colorMode` and `activeTheme`
+- `useTheme` hook manages `colorMode: 'light' | 'dark'`
 - CSS custom properties on `:root` swapped by `useTheme` to avoid React re-renders
-- ThemeSwitcher positioned: top-right corner on desktop, within AppHeader on mobile
-- Palette colours to be defined during implementation (5 options targeting different tones: warm, cool, sage, terracotta, slate)
+- ThemeSwitcher: moon icon in light mode, sun icon in dark mode — top-right corner on desktop, within AppHeader on mobile
+- Dark mode applies CSS grain texture (noise overlay) and swaps dot grid for grain
+- Preference stored in `localStorage('bj-theme')`, read on mount before first render
