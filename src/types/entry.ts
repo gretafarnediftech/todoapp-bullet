@@ -12,6 +12,8 @@ export interface Entry {
   /** Minutes since creation — used for sort order only, never displayed */
   ago: number
   status: EntryStatus
+  /** Unix ms timestamp of creation — used for period boundary checks */
+  createdAt?: number
   /** HH:MM for daily, YYYY-MM-DD for others */
   when?: string
   /** Relative label shown after migrated text, e.g. 'tomorrow', 'this week' */
