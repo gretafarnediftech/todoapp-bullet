@@ -1,6 +1,10 @@
 import type { Entry, MigrationItem } from '../types/entry'
 
 export const SEED_ENTRIES: Entry[] = [
+  // Daily — yesterday (unresolved — for migration ritual demo at 00:01)
+  { id: 'd_y1', view: 'daily', type: 'task', text: 'File the building-insurance receipt',   ago: 1550, status: 'active' },
+  { id: 'd_y2', view: 'daily', type: 'task', text: 'Confirm Friday plans with Linnea',      ago: 1600, status: 'active' },
+
   // Daily — today
   { id: 'd1',  view: 'daily',   type: 'task',  text: 'Reply to Mariana about the lease renewal',    ago: 47,   status: 'active' },
   { id: 'd2',  view: 'daily',   type: 'event', text: 'Dentist',                                      ago: 110,  status: 'active', when: '16:00' },
@@ -25,6 +29,7 @@ export const SEED_ENTRIES: Entry[] = [
   { id: 'm5',  view: 'monthly', type: 'event', text: 'Quarterly review w/ Sam',                      ago: 13000, status: 'active', when: '2026-05-23' },
 
   // Backlog / Future Log
+  { id: 'b0',  view: 'backlog', type: 'event', text: 'Wedding weekend — Asha & Dev',                 ago: 19500, status: 'active', when: '2026-08-15' },
   { id: 'b1',  view: 'backlog', type: 'task',  text: 'Build a small shelf for the entryway',         ago: 20000, status: 'active' },
   { id: 'b2',  view: 'backlog', type: 'task',  text: 'Plan trip to Lisbon — flights, the hotel near Alfama', ago: 21000, status: 'active' },
   { id: 'b3',  view: 'backlog', type: 'task',  text: 'Find a new GP closer to home',                 ago: 22000, status: 'active' },

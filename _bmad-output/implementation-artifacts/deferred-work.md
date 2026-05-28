@@ -22,7 +22,34 @@ Items deferred from BMad reviews. Each entry is real but not actionable at the t
 - `{...entriesCtx}` spread at `App.tsx:173` is wider than the declared `BuJoAppProps` — additional fields from `useEntries()` pass unchecked, masking refactors that change the hook's surface.
 - Inner content gets stacked padding (`28px 52px` on the column + `0 10px` on `.bj-list` and the composer) at `App.tsx:102,108,125`. Narrows the working area more than the Dev Notes figure implies.
 
+## Deferred from: code review of 1-1-app-scaffold-layout-shell (2026-05-28, re-review)
+
+- Header tabs may overflow horizontally at narrow desktop viewports (768–900px) in `HeaderBar.tsx:30-66` — no horizontal scroll or label truncation guard; low priority polish.
+
+## Deferred from: code review of 1-2-view-tab-navigation (2026-05-28)
+
+- Loading-skeleton CSS in `bj.css:338-363` appears in the working tree alongside Story 1.2 changes — belongs to Story 1.3 (`simulated-loading-state`); do not include in the 1-2 commit.
+
 ## Deferred from: code review of 1-3-simulated-loading-state (2026-05-28)
 
 - Unrelated `bj.css` hunks bundled with Story 1.3 (`bj.css:49,422-425`) — `.bj-tab:focus-visible` and `@keyframes bj-circle-scale-in` belong to other stories; exclude from the 1-3 commit.
 - README LoadingState description stale (`README.md:113`) — still lists bullets/pulse/dots only; update when docs are next touched.
+
+## Deferred from: code review of 4-1-migration-ritual-prompt-on-app-open (2026-05-28)
+
+- `completedAt` in pre-existing seed entries uses small integers (e.g. 12, 280, 2500) rather than Unix ms timestamps — breaks any date-aware logic on that field (`seed.ts`).
+- `localStorage` parse errors in `loadEntries()` are silently swallowed with no logging or user feedback (`useEntries.ts`).
+- No runtime validation of deserialized localStorage schema — TypeScript `as` cast only; malformed data passes unchecked (`useEntries.ts`).
+- `entry.ago` undefined/missing → `NaN` timestamp; task silently excluded from migration candidates (`useEntries.ts` `resolveCreatedAt`).
+- `migrate()` copies the source `when` field unchanged to the new entry, violating the format contract when crossing period types (HH:MM vs YYYY-MM-DD) (`useEntries.ts`).
+- Browser background-tab throttling can shift the 60-second interval past the 00:01 window, silently skipping the morning ritual for that calendar day (`useTimeReminder.ts`).
+- `startOfThisWeek` hardcodes Monday as week start; Sunday-first locales will misclassify Sunday tasks as previous-week (`useEntries.ts`).
+- `banneredRef`/`ritualRef` never reset across calendar days — long-lived sessions won't see the banner/ritual again without a page reload (`useTimeReminder.ts`).
+- Negative `entry.ago` values produce a future `createdAt` timestamp, silently excluding those tasks from migration (`useEntries.ts`).
+
+## Deferred from: code review of 2-1-display-entry-list-with-mock-data (2026-05-28)
+
+- `localStorage` does not merge updated seed rows; returning users who already have `bj-entries` will not see `b0`/`d_y1`/`d_y2` until storage is cleared (`useEntries.ts:loadEntries`).
+- d_y1/d_y2 inflate active daily task count for EndOfPeriodBanner (18:00) because filter ignores `createdAt >= startOfToday()` (`App.tsx:activePeriodTasks`).
+- Ritual queue re-derives on view switch while modal open; switching away from daily can swap to `MIGRATION_QUEUE` with mismatched ids (`App.tsx:ritualQueue`).
+- d_y1 text duplicates MIGRATION_QUEUE mq1; fallback ritual can show the same task under different ids (`seed.ts`).
