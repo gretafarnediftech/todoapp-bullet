@@ -2,7 +2,7 @@
 title: "BuJo Todo App — Component Inventory"
 status: final
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-28
 author: Winston (BMAD Architect Persona)
 ---
 
@@ -13,6 +13,18 @@ author: Winston (BMAD Architect Persona)
 This document maps all screens, components, user flows, and the component hierarchy for the BuJo Todo App frontend prototype. It is derived from the Project Brief and BuJo Design Specification and serves as the authoritative reference for the Story Creation phase and implementation.
 
 Tech stack: **React 18 + TypeScript + Vite + Tailwind CSS v3 + Kalam (Google Fonts)**. No router required — single-page, view switching managed by local state.
+
+### Brownfield naming map (2026-05-28)
+
+| Spec / inventory name | Actual implementation |
+|---|---|
+| `BulletEntry` | `EntryRow.tsx` |
+| `BulletSymbol` | `Glyph.tsx` |
+| `EntryInput` / `SymbolPicker` | `Composer.tsx` (task ↔ event toggle) |
+| `EntryTimestamp` / `formatTimestamp.ts` | `formatWhen()` in `EntryRow.tsx`; `ago` sort key only — not displayed |
+| `mockEntries.ts` | `data/seed.ts` |
+| `ViewTabs` | `Tabs.tsx` + `HeaderBar.tsx` |
+| Relative creation timestamp | Optional `when` label when scheduled; no "2h ago" / "Just now" |
 
 ---
 
@@ -276,7 +288,7 @@ User taps · symbol on a task entry
   → BulletSymbol triggers animation
   → SVG draws first diagonal stroke (~150ms)
   → SVG draws second diagonal stroke (~150ms)
-  → Entry text fades to 45% opacity
+  → Entry text fades to 28% opacity (dim, no strikethrough)
   → Symbol = X (completed)
 ```
 
@@ -372,4 +384,6 @@ todo-app/
 | SVG animation via stroke-dashoffset | CSS keyframes | Native, dependency-free; precise control over stroke timing per diagonal |
 | No animation library | Raw CSS keyframes | Framer Motion is powerful but overkill for two SVG strokes and opacity transitions |
 | localStorage for state | Optional / deferred | Keeps prototype simple; can be added to `useEntries` without architecture change |
-| Mock entries in a static file | `data/mockEntries.ts` | Predictable, version-controllable, easy to modify during demo |
+| Mock entries in a static file | `data/seed.ts` | Predictable, version-controllable, easy to modify during demo |
+| Entry sort order | Oldest top, newest bottom (`b.ago - a.ago`) | Matches BuJo page-fill direction per design spec |
+| Entry timestamps | Optional `when` label only; `ago` is sort-only | Aligns UX-DR4 with design spec right-slot behaviour |

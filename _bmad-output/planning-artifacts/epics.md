@@ -25,10 +25,10 @@ FR3: User can mark a task as completed (· → X) triggering an SVG hand-drawn a
 FR4: User can mark a task as migrated (· → >) and choose a destination view via a "When?" prompt
 FR5: User can mark a task as scheduled to backlog (· → <), moving it to the Backlog view
 FR6: User can permanently delete any entry from the current view
-FR7: On app open, if unresolved tasks exist from the previous period, a migration ritual prompt is shown
+FR7: At 18:00, if unresolved tasks exist in the current period, a non-blocking end-of-day reminder banner is shown immediately (even if the app is already open). At 00:01, a blocking migration ritual modal is shown immediately in-session, preventing further interaction until the user resolves or dismisses all unresolved tasks.
 FR8: User can toggle visibility of completed tasks and notes independently via a filter bar
 FR9: User can switch between B&W mode (default) and Colour mode with 4–5 fixed preset palettes
-FR10: Each entry displays a symbol (bullet key), text, and creation timestamp in relative format
+FR10: Each entry displays a symbol (bullet key), text, and an optional formatted `when` label (time or date) when the entry has a scheduled time — no relative creation timestamp
 FR11: App displays an empty state when no entries exist in the current view after filtering
 FR12: App displays a loading state on initial data fetch (simulated 400ms delay)
 FR13: App displays an error state when data retrieval fails (simulated), with a retry action
@@ -37,7 +37,7 @@ FR13: App displays an error state when data retrieval fails (simulated), with a 
 
 NFR1: All UI updates are reflected instantly — no perceptible delay on any user interaction
 NFR2: All interactive components must implement hover, active, and disabled states
-NFR3: Layout must be responsive: desktop (centred layout, max-width ~680px) and mobile (full-screen)
+NFR3: Layout must be responsive: desktop (centred layout, max-width ~1048px) and mobile (full-screen)
 NFR4: All data interactions use mock data only — no backend integration required
 NFR5: Typography — Kalam (Google Fonts) for entries/titles/symbols (weights 400, 700); Inter (Google Fonts) for tab labels, period label, metadata (weights 300, 400)
 NFR6: Light mode: off-white background (#F5F4F0), near-black text (#1A1A1A), dot grid texture; Dark mode: near-black (#141414) + CSS grain texture, off-white text
@@ -48,7 +48,7 @@ NFR7: The prototype must feel production-ready despite minimal scope
 - No router required — view switching managed by local React state (`activeView`)
 - CSS custom properties on `:root` used for theming to enable instant palette switching without re-render
 - SVG animation for task completion via `stroke-dashoffset` CSS keyframes — no animation library dependency
-- Mock data pre-seeded in `src/data/mockEntries.ts` covering all four views
+- Mock data pre-seeded in `src/data/seed.ts` covering all four views
 - Project scaffolded with `npm create vite@latest . -- --template react-ts` + Tailwind CSS v3
 - Component architecture must not prevent future addition of: auth, priorities, deadlines, filtering, sorting
 
@@ -56,8 +56,8 @@ NFR7: The prototype must feel production-ready despite minimal scope
 
 UX-DR1: Six BuJo symbols rendered correctly — `·` (task), animated SVG `×` (completed), `>` (migrated), `<` (scheduled), `○` (event), `–` (note)
 UX-DR2: Task completion animation — SVG `×` drawn via stroke-dashoffset in two sequential diagonal strokes (~150ms each)
-UX-DR3: Completed, migrated, and scheduled entries display text with 45% opacity and line-through
-UX-DR4: No timestamp on entries — entries display symbol + text only; migrated entries additionally show `→ destination` tag in muted Inter text
+UX-DR3: Completed, migrated, and scheduled entries display text at 28% opacity (dim) — no strikethrough; strikethrough is reserved for `originalText` when an entry was edited
+UX-DR4: No relative creation timestamp on entries — entries display symbol + text; optional formatted `when` label (time/date) when scheduled; migrated entries additionally show `→ destination` tag in muted Inter text
 UX-DR5: Tab navigation — horizontal tab bar with icon + label (Inter) per tab; icons: ✦ Daily, ≡ Weekly, ⊞ Monthly, ≡ Future Log
 UX-DR6: MigrationPrompt — modal/banner for unresolved tasks from previous day, week, OR month
 UX-DR7: ThemeSwitcher — Light/Dark toggle (sun/moon icon, top-right); dark mode applies grain/noise CSS texture
@@ -65,12 +65,12 @@ UX-DR8: FilterBar — two independent toggles: "Hide completed" and "Hide notes"
 UX-DR9: EntryInput inline as the last row of the list — renders as `· Write a task...` placeholder, not a separate sticky form
 UX-DR10: All interactive elements implement hover, active, and disabled states (buttons, tabs, bullets, toggles)
 UX-DR11: Mobile layout: full-screen list, tab navigation visible at top
-UX-DR12: Desktop layout: centred container (max-width ~680px), horizontal tabs above the list
+UX-DR12: Desktop layout: centred container (max-width ~1048px), horizontal tabs above the list
 UX-DR13: EmptyState — contextualised message per view + visual CTA
 UX-DR14: LoadingState — animated skeleton lines in BuJo style within EntryList
 UX-DR15: ErrorState — message + "Try again" retry button, wired to `retryLoad`
-UX-DR16: Logo `.B` top-left (Kalam bold); period header = small label (Inter small caps) + large title (Kalam bold) + squiggle SVG underline
-UX-DR17: Decorative doodle SVG per view (bottom-right): frog (Daily), rocket (Weekly), tree (Monthly), mountains (Future Log)
+UX-DR16: Logo `• Journal` top-left — bullet character + wordmark, both Kalam bold; period header = small label (Inter small caps) + large title (Kalam bold) + squiggle SVG underline
+UX-DR17: Decorative doodle SVG per view (bottom-right): frog (Daily), rocket (Weekly), tree (Monthly), mountains (Future Log) — _deferred to polish pass, currently hidden_
 
 ### FR Coverage Map
 
@@ -83,7 +83,7 @@ FR6: Epic 2 — Entry deletion via EntryActions
 FR7: Epic 4 — Migration ritual prompt on app open (MigrationPrompt)
 FR8: Epic 4 — FilterBar toggles (hide completed / hide notes)
 FR9: Epic 5 — ThemeSwitcher (B&W / Colour mode)
-FR10: Epic 2 — Entry display: symbol + text + timestamp (BulletEntry)
+FR10: Epic 2 — Entry display: symbol + text + optional `when` label (EntryRow)
 FR11: Epic 1 — EmptyState component within EntryList
 FR12: Epic 1 — LoadingState component + simulated 400ms delay in useEntries
 FR13: Epic 1 — ErrorState component + retryLoad in useEntries
@@ -97,7 +97,7 @@ Users can open the app, see it load correctly, navigate between the four BuJo vi
 **FRs covered:** FR2, FR11, FR12, FR13
 
 ### Epic 2: Entry Management (Core CRUD)
-Users can create new entries, view the full list of entries for the active view, and delete entries. Each entry correctly displays its BuJo symbol, text, and timestamp.
+Users can create new entries, view the full list of entries for the active view, and delete entries. Each entry correctly displays its BuJo symbol, text, and optional scheduled time/date when set.
 **FRs covered:** FR1, FR6, FR10
 
 ### Epic 3: Task State Transitions
@@ -128,7 +128,7 @@ So that I have a consistent visual container for all views and interactions.
 
 **Given** I open the app in a browser
 **When** the page loads
-**Then** I see the app title and a single-column centred layout (max-width ~680px on desktop)
+**Then** I see the app title and a single-column centred layout (max-width ~1048px on desktop)
 **And** the Kalam font (Google Fonts) is loaded and applied to all text
 **And** the background is ivory/cream (#FAFAF7) with a subtle dot grid texture visible
 **And** on mobile (< 768px) the layout is full-width with appropriate horizontal padding
@@ -139,6 +139,7 @@ So that I have a consistent visual container for all views and interactions.
 - Kalam loaded via Google Fonts `<link>` in `index.html`
 - Dot grid implemented as an SVG background pattern on a root div
 - Tailwind config extended with BuJo colour tokens (`bujo-ivory`, `bujo-ink`, etc.)
+- Weekly view header format: `main = "{Month} · Week {N}"` (week-of-month, 1-indexed by Monday); `sup = "Mon DD – Sun DD MMM"` with both months/years shown when the week crosses a calendar boundary
 
 ---
 
@@ -162,8 +163,8 @@ So that I can access different time horizons for my entries without leaving the 
 
 **Design Decisions:**
 - ViewTabs receives `activeView` and `onChange` as props from App
-- Active tab: ink colour (#1A1A1A) with bottom border indicator in B&W mode
-- Tab font: Kalam 400, slightly smaller than body
+- Active tab: ink colour (#1A1A1A), weight 600, full opacity — no underline indicator
+- Tab font: Inter uppercase, letter-spacing 0.8, slightly smaller than body
 
 ---
 
@@ -237,7 +238,7 @@ So that I know something went wrong and can attempt to recover without refreshin
 
 ## Epic 2: Entry Management (Core CRUD)
 
-Users can add new entries (tasks, events, or notes) to any view, see the full entry list with correct symbols and timestamps, and delete entries they no longer need.
+Users can add new entries (tasks and events) to any view, see the full entry list with correct symbols and optional `when` labels, and delete entries they no longer need.
 
 ### Story 2.1: Display Entry List with Mock Data
 
@@ -250,14 +251,16 @@ So that I can immediately see the BuJo system in action and understand how entri
 **Given** the app has loaded successfully
 **When** I view any of the four views
 **Then** I see a list of pre-seeded mock entries relevant to that view
-**And** each entry displays: a BuJo symbol on the left, the entry text, and a relative timestamp on the right
-**And** mock entries include at least one of each type: task (·), event (○), and note (–)
-**And** entries are displayed in reverse-chronological order (newest first)
+**And** each entry displays: a BuJo symbol on the left, the entry text, and a formatted time/date label on the right when `when` is set (no relative creation timestamp)
+**And** mock entries include at least one task (·) and one event (○) per view
+**And** entries are displayed oldest-first, newest at bottom (BuJo page-fill direction)
 **And** the list is scrollable when entries exceed the visible area
 
 **Design Decisions:**
-- Mock data sourced from `src/data/mockEntries.ts`, seeded for all 4 views
-- Entry row: symbol (fixed width, Kalam 700) + text (flex-grow, Kalam 400) + timestamp (fixed width, Kalam 300, muted)
+- Mock data sourced from `src/data/seed.ts`, seeded for all 4 views
+- Entry row component: `EntryRow.tsx` — symbol (22px fixed width, Kalam 700) + text (flex-grow, `.bj-write`) + optional `when` label via `formatWhen()` (0.45 opacity)
+- `ago` field is a sort key only — never displayed as a relative timestamp
+- All three columns (symbol, text, right slot) vertically aligned — `align-items: center` on the row grid
 
 ---
 
@@ -275,8 +278,8 @@ So that I can record tasks, events, and notes in my BuJo without friction.
 **When** I click the SymbolPicker
 **Then** a compact menu shows the three addable types: task (·), event (○), note (–)
 **When** I select a type and type text in the text field then press Enter (or tap a submit button on mobile)
-**Then** the new entry appears immediately at the top of the current view's list
-**And** the entry shows the correct symbol, the text I typed, and "Just now" as the timestamp
+**Then** the new entry appears immediately at the bottom of the current view's list (newest position)
+**And** the entry shows the correct symbol and the text I typed (no relative creation timestamp; optional `when` if set via picker)
 **And** the text field is cleared and focus returns to it
 **And** empty text submissions are ignored (no empty entry created)
 
@@ -327,15 +330,22 @@ So that completing a task feels satisfying and visually distinct from the paper 
 **Then** an SVG animation begins: the first diagonal stroke of the X is drawn (~150ms)
 **And** then the second diagonal stroke is drawn (~150ms)
 **And** after animation, the symbol is `×` (fully drawn X)
-**And** the task text transitions to 45% opacity with a strikethrough
+**And** the task text transitions to 28% opacity (dim) — no strikethrough
 **And** the change is immediate — no server round-trip, no delay
 **And** the completed entry remains in the list (not removed) unless the "Hide completed" filter is active
 
 **Design Decisions:**
 - BulletSymbol uses SVG with `stroke-dasharray` + `stroke-dashoffset` animated via CSS `@keyframes`
 - Two `<line>` elements, each animated sequentially via `animation-delay`
-- Text styling: Tailwind `line-through opacity-[0.45]`
+- Text styling on completion: `opacity: 0.28` on glyph and entry text only — no strikethrough; the right-side action icons (delete, migrate, etc.) must remain at full opacity regardless of completion state
 - `completeEntry(id)` updates the entry symbol to `completed` in `useEntries`
+
+**Event Completion Animation (Fix 3):**
+- Clicking the `○` (event) bullet marks the event as done
+- Animation: the circle interior fills with a hand-drawn-style animation — use an SVG `<circle>` with a `fill` that animates from transparent to ink colour, combined with a slight hand-drawn irregularity (e.g. a second slightly-offset stroke around the perimeter, animated similarly to the X strokes via `stroke-dashoffset`, ~200ms total)
+- After animation: the circle appears filled (solid ink); event text dims to 28% opacity (same as tasks, no strikethrough)
+- The fill animation should feel sequential and organic, consistent with the X drawing animation — not a CSS `opacity` fade
+- `completeEntry(id)` already handles `done` status; ensure it works for `type: 'event'` entries as well as `type: 'task'`
 
 ---
 
@@ -359,8 +369,32 @@ So that I can reschedule work following the BuJo migration ritual.
 
 **Design Decisions:**
 - "When?" prompt is an inline popover anchored to the EntryActions area
+- Migrate/move action is shown for **both** `type: 'task'` and `type: 'event'` entries — not just tasks (Fix 4)
 - `migrateEntry(id, destinationView)` handles symbol update + new entry creation in `useEntries`
-- Migrate option only shown for entries with symbol = `task`
+
+**Revised Migration Behaviour (Fix 8 — replaces original spec):**
+
+The original spec had all migrated entries remain in the source list with a `>` symbol. The revised behaviour splits into two cases:
+
+- **"Tomorrow" destination (Daily view only):**
+  - The entry stays in the source list with `>` symbol and `→ tomorrow` label (unchanged from original)
+  - A copy is also created in the Daily view's tomorrow entries (stored with a `when` date = tomorrow's date, `YYYY-MM-DD`)
+  - At midnight (or on next app open after midnight), tomorrow's entries appear in the Daily view — the user sees the task they deferred
+  - `migrateEntry(id, 'daily', { tomorrow: true })` stores the copy with the future date
+
+- **All other destinations (This Week / This Month / Future Log / Backlog):**
+  - The entry is **moved** (not copied): it disappears from the source list entirely
+  - It appears immediately in the destination view's list
+  - No `>` symbol remains in the source — the entry is gone from the source
+  - `migrateEntry(id, destinationView)` removes from source and adds to destination in `useEntries` state
+
+**Undo Migration (Fix 6):**
+- After a non-tomorrow migration, the moved entry in the **destination** view displays a small undo icon (← or ↩) on hover
+- Clicking the undo icon reverses the migration: entry is removed from destination and re-added to the original source view with its original symbol (`task` or `event`, status `active`)
+- The undo icon is only visible on hover (desktop) / as an inline icon (mobile), consistent with the delete action pattern
+- Undo is available for the session only (no persistence across page reloads in v1)
+- `undoMigration(id, sourceView, destinationView)` in `useEntries` handles the reversal
+- For "tomorrow" entries (the copy in Daily): no undo needed — the user can simply delete the future copy
 
 ---
 
@@ -388,42 +422,56 @@ So that I can defer open-ended tasks without specifying an exact date.
 
 ## Epic 4: Migration Ritual & Filters
 
-On app open, users are prompted to act on unresolved tasks from the previous period. Users can also filter the active view to hide completed tasks or notes.
+At 18:00, users are reminded to deal with unresolved tasks via a non-blocking banner. At 00:01, a blocking modal prevents further interaction until tasks are resolved. Users can also filter the active view to hide completed tasks or notes.
 
-### Story 4.1: Migration Ritual Prompt on App Open
+### Story 4.1: Migration Ritual — Time-Triggered Banner & Blocking Prompt
 
 As a user,
-I want to be prompted about unresolved tasks from yesterday (or last week) when I open the app,
-So that I consciously decide what happens to carried-over work — just like the paper BuJo ritual.
+I want to be reminded at 18:00 to deal with unresolved tasks before the day ends, and be required to act on them at 00:01,
+So that I consciously close out each day following the BuJo ritual — whether I'm actively using the app or not.
 
 **Acceptance Criteria:**
 
-**Given** the app has loaded
-**When** there are task entries from the previous period (yesterday's Daily, last week's Weekly, last month's Monthly) with symbol `task` (not completed, migrated, or scheduled)
-**Then** a **trigger banner** appears at the top of the current view with contextual copy:
-  - Daily: "Yesterday ended. Migrate what still matters; let the rest go." + **"Review now"** button
-  - Weekly: "End of week. Tomorrow the week resets. Migrate what still matters; let the rest go." + **"Review now"** button
-  - Monthly: "New month starting. Migrate what still matters; let the rest go." + **"Review now"** button
-**When** I click "Review now"
-**Then** a modal opens with title **"The morning ritual"** and section header **"Yesterday's leftovers"** (or week/month equivalent)
-**And** the unresolved tasks are listed with three action buttons each: **"today"**, **"future"**, **"drop"**
+**--- 18:00 TRIGGER (soft reminder) ---**
+
+**Given** the app is open (or is opened) at or after 18:00
+**When** there are active `task` entries in the current period (today's Daily, this week's Weekly, this month's Monthly)
+**Then** the `EndOfPeriodBanner` appears immediately at the top of the current view with contextual copy:
+  - Daily: "End of day. A new day starts tomorrow. Decide what to do with anything still on the page."
+  - Weekly: "End of week. Tomorrow the week resets. Migrate what still matters; let the rest go."
+  - Monthly: "End of month. A new month begins. Decide what carries forward — and what doesn't."
+**And** the banner has a dismiss (×) button — clicking it hides the banner for the session
+**And** the banner is not shown if there are no active tasks in the current period
+
+**--- 00:01 TRIGGER (blocking modal) ---**
+
+**Given** the app is open (or is opened) at or after 00:01
+**When** there are active `task` entries from the previous period (yesterday's Daily, last week's Weekly, last month's Monthly)
+**Then** the `MigrationPrompt` modal opens immediately and blocks all interaction — no dismiss, no "Maybe later"
+**And** the modal title is **"The morning ritual"** with section header **"Yesterday's leftovers"** (or week/month equivalent)
+**And** each unresolved task shows three action buttons: **"today"**, **"future"**, **"drop"**
 **And** a badge shows **"N left"** (count of unresolved tasks)
-**And** a **"Maybe later"** link dismisses the modal without acting
+**And** the modal can only be closed once every task has been actioned
 **When** I click "today" on a task
-**Then** the task is migrated to the Daily view; the original entry gets `>` symbol + `→ tomorrow` destination tag
+**Then** the task is migrated to the Daily view; the original entry gets `>` symbol + `→ today` destination tag
 **When** I click "future" on a task
 **Then** the task is migrated to the Future Log; the original gets `>` + `→ future` tag
 **When** I click "drop" on a task
-**Then** the task is removed from the previous period's view permanently
-**And** the trigger banner is not shown if there are no unresolved tasks
+**Then** the task is permanently removed from the previous period's view
+**And** once all tasks are actioned, the modal closes automatically
+**And** if there are no unresolved tasks from the previous period at 00:01, the modal is not shown
 
 **Design Decisions:**
-- `unresolvedFromPreviousPeriod(view)` in `useEntries` checks daily, weekly, and monthly
-- Trigger banner renders above EntryList — not a modal itself, just a banner with "Review now"
-- Clicking "Review now" opens the MigrationRitualModal (separate component from the banner)
-- Per-task actions are **today / future / drop** (not migrate/delete/postpone)
-- Destination tag on migrated entries uses relative label: "→ tomorrow", "→ next week", "→ future"
-- "Maybe later" dismisses the modal, banner remains visible but collapsed for the session
+- `useTimeReminder` hook (new) runs a `setInterval` every 60s, checking `new Date()` against the 18:00 and 00:01 thresholds
+- On crossing 18:00: sets `showBanner: true` in app state if active tasks exist in the current period
+- On crossing 00:01: sets `migrationOpen: 'ritual'` in app state if unresolved tasks exist from the previous period; fires immediately even mid-session
+- `unresolvedFromPreviousPeriod()` in `useEntries` — compares entry `view` + creation date against the previous calendar day/week/month
+- `EndOfPeriodBanner` renders above EntryList; shown when `showBanner === true`; dismissed via × only (sets `showBanner: false`, session only) — no "Review now" button
+- `MigrationPrompt` with `canDefer={false}` when opened by the 00:01 trigger — hides "Maybe later" and disables backdrop dismiss
+- Per-task actions: **today / future / drop**
+- Destination tags: "→ today", "→ next week", "→ future"
+- Both triggers use the existing `showBanner` / `migrationOpen` state shape in `App.tsx` — no new global state shape needed
+- A single interval-based hook isolates all time logic outside of component render cycles
 
 ---
 
@@ -469,7 +517,7 @@ So that the aesthetic matches the calm, minimal, handwritten quality of a paper 
 **Given** I open the app in B&W mode (default)
 **When** I look at the app
 **Then** the background is ivory/cream (#FAFAF7) with a visible but subtle dot grid texture
-**And** the Kalam font is applied at the correct weights: 300 for timestamps/meta, 400 for body text, 700 for titles and symbols
+**And** the Kalam font is applied at the correct weights: 300 for `when` labels/meta, 400 for body text, 700 for titles and symbols
 **And** all text is in near-black (#1A1A1A)
 **And** there are no heavy drop shadows, gradients, or decorative elements
 **And** the visual weight feels minimal, clean, and calm

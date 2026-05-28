@@ -126,6 +126,7 @@ Brownfield verification: confirmed existing list pipeline (seed → useEntries �
 
 - 2026-05-28: Verified brownfield entry list; added backlog event seed; documented sort-order epic deviation; build passed
 - 2026-05-28: Code review approved — sort order confirmed (newest bottom); d_y1/d_y2 kept as forward scaffolding
+- 2026-05-28: Correct course — epics/project-brief/component-inventory aligned to implementation
 
 ### Review Findings
 

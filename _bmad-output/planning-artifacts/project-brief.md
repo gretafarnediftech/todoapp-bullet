@@ -49,7 +49,9 @@ The user marks a task as scheduled to the backlog. The task moves to the Backlog
 The user permanently removes an entry from the list. The deletion is instant with no confirmation dialog. [ASSUMPTION: no undo / soft delete in v1.]
 
 ### 7. Migration ritual prompt
-On first open each day, week, **or month**, if unresolved tasks exist from the previous period (yesterday's Daily, last week's Weekly, last month's Monthly), the app displays a migration prompt (banner or modal). For each unresolved task, the user chooses: **migrate**, **delete**, or **postpone**. Migrated tasks appear in the current view with `>` and show a `→ destination` tag.
+At 18:00, if active tasks exist in the current period, a dismissible end-of-day reminder banner appears immediately in-session. The user can dismiss it with ×; no action is required at this point.
+
+At 00:01, if unresolved tasks exist from the previous period (yesterday's Daily, last week's Weekly, last month's Monthly), a blocking migration modal opens immediately in-session and cannot be dismissed until every task is actioned. For each task the user chooses: **today**, **future**, or **drop**. Migrated tasks appear with `>` and a `→ destination` tag.
 
 ### 8. Filter completed items and notes
 A toggle bar allows the user to hide/show completed tasks and separately hide/show notes. Filters persist per session. [ASSUMPTION: filters reset on page reload.]
@@ -67,14 +69,14 @@ The user can toggle between **B&W mode** (default, pure black and white) and **C
 |---|---|
 | Views | Daily, Weekly, Monthly, Backlog — all four views present and functional |
 | Entry types | Task (·), Completed (X), Migrated (>), Scheduled (<), Event (○), Note (–) |
-| Entry fields | Symbol, text, creation timestamp (relative format) |
+| Entry fields | Symbol, text, optional scheduled `when` (formatted time/date); no relative creation timestamp |
 | Interactions | Add, complete, migrate, schedule, delete |
 | Animation | SVG hand-drawn X on task completion |
 | Migration ritual | Prompt on open if unresolved tasks exist from previous period |
 | Filters | Toggle completed items; toggle notes |
 | Colour modes | B&W (default) + Colour with 4–5 fixed palettes |
 | Visual theme | Kalam font (Google Fonts), ivory/cream background, dot grid texture |
-| Responsive | Desktop (centred, max-width ~680px) + Mobile (full-screen, tab nav) |
+| Responsive | Desktop (centred, max-width ~1048px) + Mobile (full-screen, tab nav) |
 | UI states | Empty state, Loading state, Error state, Migration prompt |
 | Component states | Hover, active, disabled on all interactive elements |
 | Data | Mock data only — no backend, no real persistence |
@@ -98,10 +100,10 @@ The component architecture must not prevent any of these features from being add
 - **Fonts**: Kalam (Google Fonts) — entries, titles, symbols (weights 400, 700); Inter (Google Fonts) — tab labels, metadata, period label (weights 300, 400)
 - **Light mode**: off-white background `#F5F4F0`, near-black text `#1A1A1A`, dot grid overlay
 - **Dark mode**: near-black background `#141414`, off-white text, CSS grain/noise texture
-- **No timestamp on entries** — entries show symbol + text only (+ `→ destination` tag for migrated entries)
+- **No relative creation timestamp on entries** — entries show symbol + text; optional formatted `when` label when scheduled (+ `→ destination` tag for migrated entries)
 - **Entry input inline** — last row of the list (`· Write a task...`), not a separate sticky form
-- **Logo**: `.B` top-left corner (Kalam bold)
-- **Decorative doodle SVGs** per view: frog (Daily), rocket (Weekly), tree (Monthly), mountains (Future Log)
+- **Logo**: `• Journal` top-left — bullet character + wordmark, both Kalam bold
+- **Decorative doodle SVGs** per view: frog (Daily), rocket (Weekly), tree (Monthly), mountains (Future Log) — _deferred to polish pass, currently hidden_
 - **Period header**: small label (Inter, small caps) + large title (Kalam bold) + squiggle SVG underline
 - Animations must feel instantaneous — no perceptible delay on any interaction
 
