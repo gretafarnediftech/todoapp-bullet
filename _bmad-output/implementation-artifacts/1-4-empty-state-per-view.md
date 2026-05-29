@@ -115,7 +115,6 @@ N/A — brownfield verification story; no code changes required.
 - [x] [Review][Defer] `entries` null/undefined crash before `isLoading` guard [`src/components/App.tsx:99`] — deferred, pre-existing; `useEntries` always initialises to `[]`
 - [x] [Review][Defer] `e.ago` NaN/undefined produces non-deterministic sort [`src/components/App.tsx:100`] — deferred, pre-existing; `useEntries` always writes `ago: 0` on creation
 - [x] [Review][Defer] `isLoading && hasError` simultaneously makes ErrorState unreachable [`src/components/App.tsx:160-163`] — deferred, pre-existing; `useEntries` state machine concern
-- [x] [Review][Defer] `visible` filter scope limited to view only — AC1 "after active filters" not yet composed [`src/components/App.tsx:99-101`] — deferred, explicitly scoped to Story 4.2 in Dev Notes
 
 ### File List
 

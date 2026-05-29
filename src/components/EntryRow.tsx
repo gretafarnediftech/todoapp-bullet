@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { Entry, EntryView } from '../types/entry'
 import { Glyph } from './Glyph'
-import { EditIcon, MigrateIcon, Trash } from './doodles/Doodle'
+import { EditIcon, MigrateIcon, Trash, Undo } from './doodles/Doodle'
 import { TabDaily, TabWeekly, TabMonthly, TabBacklog } from './doodles/Doodle'
 import { WhenChip } from './pickers/DatePicker'
 
@@ -55,8 +55,13 @@ function MovePicker({
     const onDoc = (e: MouseEvent) => {
       if (popRef.current && !popRef.current.contains(e.target as Node)) onClose()
     }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [onClose])
 
   const destinations = [
@@ -95,9 +100,12 @@ interface EntryRowProps {
   onMigrate: (id: string, destView: string, label: string) => void
   onDelete: (id: string) => void
   onEdit: (id: string, patch: { text: string; when?: string }) => void
+  canUndo?: boolean
+  onUndo?: (id: string) => void
+  onUnmigrate?: (id: string) => void
 }
 
-export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMigrate, onDelete, onEdit }: EntryRowProps) {
+export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMigrate, onDelete, onEdit, canUndo, onUndo, onUnmigrate }: EntryRowProps) {
   const [hover, setHover] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(entry.text)
@@ -160,6 +168,8 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
       setTimeout(() => setJustDone(false), 500)
     } else if (entry.status === 'done') {
       onCycle(entry.id, 'active')
+    } else if (entry.status === 'migrated' && entry.migratedTo === 'tomorrow') {
+      onUnmigrate?.(entry.id)
     }
   }
 
@@ -204,8 +214,8 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
         className="bj-glyph-btn bj-write"
         style={{
           appearance: 'none', border: 0, background: 'transparent',
-          padding: 0, cursor: (entry.status === 'active') ? 'pointer' : 'default',
-          font: 'inherit', color: 'inherit',
+          padding: 0, cursor: (entry.status === 'active' || (entry.status === 'migrated' && entry.migratedTo === 'tomorrow')) ? 'pointer' : 'default',
+          font: 'inherit',
           width: 22, height: lineH, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
           fontWeight: 700, fontSize: '1.15em',
@@ -279,8 +289,11 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
                   />
                 )}
               </span>
-            )}
-            <button className="bj-act" onClick={() => onDelete(entry.id)} title="Delete">
+            )}            {canUndo && (
+              <button className="bj-act" onClick={() => onUndo?.(entry.id)} title="Undo migration">
+                <Undo size={15} />
+              </button>
+            )}            <button className="bj-act" onClick={() => onDelete(entry.id)} title="Delete">
               <Trash size={15} />
             </button>
           </div>

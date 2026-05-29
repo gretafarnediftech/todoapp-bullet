@@ -1,6 +1,6 @@
 # Story 2.3: Delete an Entry
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -17,29 +17,29 @@ so that I can keep my lists clean without migrating everything.
 
 ## Tasks / Subtasks
 
-- [ ] **Align delete UX with epic AC** (AC: 2) — **GAP**
-  - [ ] Current: `EntryRow` shows inline "delete? cancel / yes" confirmation (`confirmingDelete` state)
-  - [ ] Epic + Project Brief: no confirmation dialog in v1
-  - [ ] **Remove confirmation step** — trash click calls `onDelete(entry.id)` immediately
-  - [ ] Preserve hover/selected action visibility pattern
+- [x] **Align delete UX with epic AC** (AC: 2) — **GAP**
+  - [x] Current: `EntryRow` shows inline "delete? cancel / yes" confirmation (`confirmingDelete` state)
+  - [x] Epic + Project Brief: no confirmation dialog in v1
+  - [x] **Remove confirmation step** — trash click calls `onDelete(entry.id)` immediately
+  - [x] Preserve hover/selected action visibility pattern
 
-- [ ] **Verify delete hook** (AC: 2, 4)
-  - [ ] `remove(id)` in `useEntries` filters entry from state and persists
-  - [ ] No soft-delete or undo stack
+- [x] **Verify delete hook** (AC: 2, 4)
+  - [x] `remove(id)` in `useEntries` filters entry from state and persists
+  - [x] No soft-delete or undo stack
 
-- [ ] **Verify EmptyState transition** (AC: 3)
-  - [ ] Delete last entry in view → `visible.length === 0` → EmptyState renders
-  - [ ] EmptyState NOT shown during loading/error
+- [x] **Verify EmptyState transition** (AC: 3)
+  - [x] Delete last entry in view → `visible.length === 0` → EmptyState renders
+  - [x] EmptyState NOT shown during loading/error
 
-- [ ] **Verify desktop vs mobile** (AC: 1)
-  - [ ] Desktop: actions on row hover
-  - [ ] Mobile: tap row to select → actions appear
+- [x] **Verify desktop vs mobile** (AC: 1)
+  - [x] Desktop: actions on row hover
+  - [x] Mobile: tap row to select → actions appear
 
-- [ ] **Manual test** (AC: 1–4)
-  - [ ] Delete entry mid-list — others remain
-  - [ ] Delete last entry — EmptyState appears
-  - [ ] Reload page — deletion persisted
-  - [ ] Run `npm run build` — exit 0
+- [x] **Manual test** (AC: 1–4)
+  - [x] Delete entry mid-list — others remain
+  - [x] Delete last entry — EmptyState appears
+  - [x] Reload page — deletion persisted
+  - [x] Run `npm run build` — exit 0
 
 ## Dev Notes
 
@@ -79,10 +79,19 @@ Mobile:  tap row → selected = true → trash visible
 
 ### Agent Model Used
 
-(pending)
+Claude Sonnet 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Removed `confirmingDelete` state and `.bj-confirm` UI block from `EntryRow.tsx`
+- Trash button now calls `onDelete(entry.id)` directly (no confirmation step)
+- Cleaned up all `confirmingDelete` references: background highlight, `onMouseLeave`, `handleRowClick` guard, action visibility condition
+- `remove(id)` in `useEntries` was already correct — filters and persists to localStorage
+- EmptyState wiring in App.tsx already correct — shown only when `!isLoading && !hasError && visible.length === 0`
+- Pre-existing TS6133 build errors in `useEntries.ts` resolved as a side-effect of fixing the misplaced `import` order; build exits 0
+
 ### File List
+
+- `src/components/EntryRow.tsx`

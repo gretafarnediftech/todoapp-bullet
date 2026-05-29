@@ -59,7 +59,6 @@ Items deferred from BMad reviews. Each entry is real but not actionable at the t
 - `entries` null/undefined would crash before the `isLoading` guard; `useEntries` always initialises to `[]` but no defensive guard is in place (`App.tsx:99`).
 - `e.ago` NaN/undefined produces non-deterministic sort order; `useEntries` always writes `ago: 0` on creation but the sort has no guard (`App.tsx:100`).
 - When `isLoading && hasError` are both true simultaneously, `ErrorState` is unreachable and the user has no retry path (`App.tsx:160-163`).
-- `visible` only filters by `view`; when additional filter axes are added (Story 4.2), the EmptyState trigger must be extended to compose them for AC1 correctness (`App.tsx:99-101`).
 
 ## Deferred from: code review of 3-1-complete-a-task-with-svg-animation (2026-05-28)
 
@@ -71,3 +70,8 @@ Items deferred from BMad reviews. Each entry is real but not actionable at the t
 - No automated tests for add-entry flow — brownfield pattern; revisit when test harness is introduced.
 - Story Dev Notes claim "Enter-only submit" but `Composer` renders a `return ↵` button when text is non-empty (`Composer.tsx:92-94`) — doc inaccuracy only.
 - Composer event glyph uses Unicode `○` while list rows use SVG `EventDot` (`Composer.tsx:28`, `Glyph.tsx`) — pre-existing visual inconsistency.
+
+## Deferred from: code review of epic-2-fix-patch (2026-05-29)
+
+- `undoMigration` is exposed for all non-tomorrow migration destinations, extending the undo scope beyond FR14 (which limits revert to `destination === 'tomorrow'` only). Not harmful — covers a wider undo surface that is not explicitly prohibited — but diverges from the spec's FR14 scope. Revisit alignment when Story 3.2 is formally implemented.
+- Hook function named `undoMigration` diverges from Story 3.2's specified API name `unmigrateEntry`. Both address FR14 intent via different interaction patterns (undo button on dest copy vs `>` glyph on source). Align naming and interaction model when Story 3.2 is implemented.

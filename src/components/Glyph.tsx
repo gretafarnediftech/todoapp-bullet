@@ -87,7 +87,6 @@ export function Glyph({ entry, animate }: { entry: Pick<Entry, 'type' | 'status'
     return <XGlyph animate={animate} />
   }
   if (status === 'migrated') return <span className="bj-glyph">›</span>
-  if (status === 'scheduled') return <span className="bj-glyph">‹</span>
   if (type === 'event') return <EventDot />
   return <span className="bj-glyph bj-bullet">·</span>
 }

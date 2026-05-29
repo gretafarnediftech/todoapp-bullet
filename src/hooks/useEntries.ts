@@ -1,5 +1,22 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Entry, EntryView, EntryType, MigDecisionKind, MigrationItem } from '../types/entry'
+
+// ─── Migration undo record (session-only) ────────────────────
+
+type UndoRecord = {
+  sourceEntry: Entry
+  destEntryId: string
+}
+
+function getTomorrowDateStr(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 import { SEED_ENTRIES } from '../data/seed'
 
 const STORAGE_KEY = 'bj-entries'
@@ -85,9 +102,12 @@ export function useEntries() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const [migratedDestIds, setMigratedDestIds] = useState<Set<string>>(new Set())
   // Keep a ref so callbacks always read the latest value without re-creating
   const entriesRef = useRef(entries)
   entriesRef.current = entries
+  // Session-only undo stack: destEntryId → undo record
+  const undoStackRef = useRef<Map<string, UndoRecord>>(new Map())
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearLoadTimer = useCallback(() => {
@@ -108,7 +128,7 @@ export function useEntries() {
       setEntries(loadEntries())
       setIsLoading(false)
       loadTimerRef.current = null
-    }, 400)
+    }, 1000)
     return clearLoadTimer
   }, [clearLoadTimer])
 
@@ -121,7 +141,7 @@ export function useEntries() {
       setEntries(loadEntries())
       setIsLoading(false)
       loadTimerRef.current = null
-    }, 400)
+    }, 1000)
   }, [clearLoadTimer])
 
   const simulateError = useCallback(() => {
@@ -138,8 +158,26 @@ export function useEntries() {
 
   const cycle = useCallback((id: string, status: Entry['status']) => {
     const next = entriesRef.current.map((e) =>
-      e.id === id ? { ...e, status, completedAt: status === 'done' ? 0 : e.completedAt } : e,
+      e.id === id
+        ? { ...e, status, completedAt: status === 'done' ? Date.now() : undefined }
+        : e,
     )
+    // If this entry was a migration-undo candidate, actioning it invalidates the undo
+    if (undoStackRef.current.has(id)) {
+      undoStackRef.current.delete(id)
+      setMigratedDestIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+    }
+    persist(next)
+  }, [persist])
+
+  const unmigrate = useCallback((id: string) => {
+    const next = entriesRef.current
+      .filter((e) => e.migratedFromId !== id)
+      .map((e) =>
+        e.id === id && e.status === 'migrated' && e.migratedTo === 'tomorrow'
+          ? { ...e, status: 'active' as const, migratedTo: undefined }
+          : e,
+      )
     persist(next)
   }, [persist])
 
@@ -169,22 +207,60 @@ export function useEntries() {
   const migrate = useCallback((id: string, destView: string, label?: string) => {
     const destLabel = label ?? DEST_LABEL[destView] ?? destView
     const cur = entriesRef.current
-    const updated = cur.map((e) =>
-      e.id === id ? { ...e, status: 'migrated' as const, migratedTo: destLabel } : e,
-    )
-    if (destView === 'tomorrow') { persist(updated); return }
     const src = cur.find((e) => e.id === id)
-    if (!src) { persist(updated); return }
-    const copy: Entry = {
-      ...src, id: newId(),
-      view: destView as EntryView,
-      status: 'active',
-      migratedTo: undefined,
-      originalText: undefined,
-      ago: 0,
-      createdAt: Date.now(),
+    if (!src) return
+
+    if (destView === 'tomorrow') {
+      // Fix 8 — Tomorrow: source stays as migrated (›); copy created in daily with when = tomorrow
+      const copyId = newId()
+      const copy: Entry = {
+        ...src,
+        id: copyId,
+        view: 'daily',
+        status: 'active',
+        migratedTo: undefined,
+        migratedFromId: id,
+        originalText: undefined,
+        ago: 0,
+        createdAt: Date.now(),
+        when: getTomorrowDateStr(),
+      }
+      const updated = cur.map((e) =>
+        e.id === id ? { ...e, status: 'migrated' as const, migratedTo: destLabel } : e,
+      )
+      persist([...updated, copy])
+    } else {
+      // Fix 8 — Other destinations: source removed; entry moved to destination as active
+      const copyId = newId()
+      const copy: Entry = {
+        ...src,
+        id: copyId,
+        view: destView as EntryView,
+        status: 'active',
+        migratedTo: undefined,
+        originalText: undefined,
+        ago: 0,
+        createdAt: Date.now(),
+      }
+      const filtered = cur.filter((e) => e.id !== id)
+      undoStackRef.current.set(copyId, { sourceEntry: src, destEntryId: copyId })
+      setMigratedDestIds((prev) => new Set([...prev, copyId]))
+      persist([...filtered, copy])
     }
-    persist([...updated, copy])
+  }, [persist])
+
+  const undoMigration = useCallback((destEntryId: string) => {
+    const record = undoStackRef.current.get(destEntryId)
+    if (!record) return
+    undoStackRef.current.delete(destEntryId)
+    setMigratedDestIds((prev) => {
+      const next = new Set(prev)
+      next.delete(destEntryId)
+      return next
+    })
+    // Remove the destination copy, restore the original source entry
+    const filtered = entriesRef.current.filter((e) => e.id !== destEntryId)
+    persist([...filtered, record.sourceEntry])
   }, [persist])
 
   const migrateForward = useCallback((id: string, fromView: EntryView) => {
@@ -205,7 +281,7 @@ export function useEntries() {
       if (!decision) continue
       switch (decision) {
         case 'done':
-          updates[item.id] = { status: 'done', completedAt: 0 }
+          updates[item.id] = { status: 'done', completedAt: Date.now() }
           break
         case 'today':
           updates[item.id] = { status: 'migrated', migratedTo: 'today' }
@@ -233,5 +309,5 @@ export function useEntries() {
     persist([...updated, ...newEntries])
   }, [persist])
 
-  return { entries, isLoading, hasError, retryLoad, simulateError, cycle, add, edit, remove, migrate, migrateForward, resolveMigration }
+  return { entries, isLoading, hasError, retryLoad, simulateError, cycle, unmigrate, add, edit, remove, migrate, undoMigration, migratedDestIds, migrateForward, resolveMigration }
 }

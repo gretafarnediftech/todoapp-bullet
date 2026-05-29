@@ -1,6 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import type { MigrationItem, MigDecisionKind } from '../types/entry'
+import type { EntryView, MigrationItem, MigDecisionKind } from '../types/entry'
 import { MIGRATION_QUEUE } from '../data/seed'
+
+// ─── View-aware ritual header ─────────────────────────────────
+
+const RITUAL_HEADER: Record<string, string> = {
+  daily:   "Yesterday's leftovers",
+  weekly:  "Last week's leftovers",
+  monthly: "Last month's leftovers",
+}
 import { Squiggle, TabDaily, TabWeekly, TabMonthly, TabBacklog, Trash, Undo, MigrateIcon } from './doodles/Doodle'
 
 // ─── Per-item decision options ───────────────────────────────
@@ -26,14 +34,18 @@ function decidedGlyph(kind: MigDecisionKind): React.ReactNode {
 interface MigrationPromptProps {
   canDefer?: boolean
   queue?: MigrationItem[]
+  /** When set, drives the view-aware section header */
+  view?: EntryView
   onClose: () => void
   onResolve: (decisions: Record<string, MigDecisionKind>) => void
 }
 
-export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, onClose, onResolve }: MigrationPromptProps) {
+export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view, onClose, onResolve }: MigrationPromptProps) {
+  const sectionHeader = (view && RITUAL_HEADER[view]) ?? "Yesterday's leftovers"
   const [decisions, setDecisions] = useState<Record<string, MigDecisionKind>>({})
   const [migSubOpen, setMigSubOpen] = useState<string | null>(null)
   const subRef = useRef<HTMLSpanElement>(null)
+  const remaining = queue.length - Object.keys(decisions).length
 
   // Close submenu on outside click
   useEffect(() => {
@@ -79,12 +91,17 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, onCl
         <div className="bj-mig-head">
           <div className="bj-mig-head-text">
             <div className="bj-mig-sup">The morning ritual</div>
-            <h2 className="bj-write bj-mig-title">Yesterday's leftovers</h2>
+            <h2 className="bj-write bj-mig-title">{sectionHeader}</h2>
             <div className="bj-mig-squig"><Squiggle w={170} opacity={0.45} /></div>
           </div>
-          {canDefer && (
-            <button className="bj-mig-close" onClick={onClose} aria-label="Close">×</button>
-          )}
+          <div className="bj-mig-head-right">
+            {remaining > 0 && (
+              <span className="bj-mig-badge">{remaining} left</span>
+            )}
+            {canDefer && (
+              <button className="bj-mig-close" onClick={onClose} aria-label="Close">×</button>
+            )}
+          </div>
         </div>
 
         <p className="bj-mig-lead">

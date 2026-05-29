@@ -1,116 +1,345 @@
-# Sprint Change Proposal — Story 4.1 Post-Review Spec Alignment
+# Sprint Change Proposal — Story 5.2 Theme Scope Correction
 
 **Date:** 2026-05-28
-**Trigger story:** 4.1 — Migration Ritual — Evening Banner & Per-View Blocking Prompt
-**Scope:** Minor — direct spec update, no backlog reorganisation or MVP change
+**Trigger story:** 5.2 — Theme switching
+**Scope:** Moderate — implementation and tracking correction, no MVP or epic restructure
 
 ---
 
 ## 1. Issue Summary
 
-During code review of Story 4.1, the original `00:01` clock-based polling trigger for the migration ritual was redesigned following product clarification. The spec assumed a global `setInterval` checking for midnight; the actual product intent is:
+During review and implementation of Story 5.2, the work drifted from the approved requirement. The approved scope is a single theme toggle between **light** and **dark** mode. The current implementation and implementation artifact instead introduce a separate **B&W / Colour** mode with palette dots and accent presets.
 
-- The ritual fires **on navigation into a view**, not on a global clock tick
-- **Daily**: any day, on first entry to Daily view in a session, if there are tasks from before today's midnight
-- **Weekly**: on Monday (or first app-open since the week started), on first entry to Weekly view
-- **Monthly**: on the 1st (or first app-open since the month started), on first entry to Monthly view
-- Each view's ritual is **independent** — both Daily and Weekly can fire in the same session
-- The ritual queue is **stabilised** at modal-open time (not recomputed from live view state)
-- The 18:00 banner trigger remains time-based and is **unchanged in intent**
+This is not a new product requirement. It is a mismatch between the approved planning artifacts and the implementation target.
+
+### Trigger and evidence
+
+- Triggering issue: Story 5.2 implementation drifted away from approved scope
+- Evidence 1: [epics.md](/Users/gretafarnedi/projects/todo-app/_bmad-output/planning-artifacts/epics.md) defines FR9 and Story 5.2 as light/dark only
+- Evidence 2: [useTheme.ts](/Users/gretafarnedi/projects/todo-app/src/hooks/useTheme.ts) defines `ColorMode = 'bw' | 'color'` and palette presets
+- Evidence 3: [HeaderBar.tsx](/Users/gretafarnedi/projects/todo-app/src/components/HeaderBar.tsx) renders a `B&W` / `Colour` button and theme dots
+- Evidence 4: [App.tsx](/Users/gretafarnedi/projects/todo-app/src/components/App.tsx) threads colour-mode props through the app shell
+- Evidence 5: [bj.css](/Users/gretafarnedi/projects/todo-app/src/styles/bj.css) contains colour-mode selectors and palette-dot styles
+- Evidence 6: [5-2-switch-between-dark-and-light-mode.md](/Users/gretafarnedi/projects/todo-app/_bmad-output/implementation-artifacts/5-2-switch-between-dark-and-light-mode.md) documents the current developer handoff artifact
+
+### Problem statement
+
+The project currently has a **requirements-traceability break** between approved planning artifacts and the implementation target for Story 5.2. If left unchanged, the backlog and source code will continue to reinforce the wrong feature.
 
 ---
 
 ## 2. Impact Analysis
 
-| Area | Impact |
-|------|--------|
-| **Epic 4** | Intro text was wrong — referenced "00:01 blocking modal"; updated to navigation trigger |
-| **Story 4.1 ACs** | "00:01 TRIGGER" section replaced entirely with "NAVIGATION TRIGGER" |
-| **Story 4.1 Design Decisions** | Hook description, queue capture, session tracking updated |
-| **FR7 (requirements inventory)** | Reworded to reflect navigation-based trigger and per-view windows |
-| **UX Spec** | No references to time triggers — no changes needed |
-| **Architecture doc** | Not present |
-| **Future stories** | No dependent stories |
-| **MVP scope** | Unchanged — FR7 is still fully covered |
+### Epic impact
+
+- **Epic 5 remains valid as written.** No epic rewrite is needed.
+- The affected scope is limited to Story 5.2 execution and tracking.
+- Epic order and sprint sequencing do not need to change.
+
+### Story impact
+
+- Story 5.2 implementation artifact must be corrected from B&W/Colour to light/dark.
+- Story 5.2 should be reset from `review` or drifted implementation status back to `ready-for-dev`, because the reviewed work targeted the wrong requirement.
+- No new stories are required.
+- No future epics are invalidated.
+
+### Artifact conflicts
+
+| Artifact | Conflict | Action Needed |
+|---|---|---|
+| PRD | No product-goal conflict | No PRD change required |
+| Epics | Already correct | No `epics.md` change required |
+| UX spec | Already aligned at high level with light/dark ThemeSwitcher | No UX rewrite required |
+| Architecture | No architecture document present | N/A |
+| Implementation artifact 5.2 | Wrong title, ACs, tasks, notes, and file identity | Replace with correct light/dark story |
+| Sprint status | Tracks wrong story slug | Rename slug and reset status to `ready-for-dev` |
+| Source code | Implements unapproved colour-mode path | Remove colour-mode path and restore light/dark-only implementation |
+
+### Technical impact
+
+- Theme hook API becomes smaller and simpler
+- Header state and props shrink
+- CSS loses colour-mode-only branches and palette-dot styles
+- Implementation should add localStorage persistence for theme mode because approved Story 5.2 requires it
+
+### MVP impact
+
+- MVP is unchanged
+- Scope is reduced back to the approved requirement, not expanded
+- No backlog replan is required beyond correcting Story 5.2 execution
 
 ---
 
 ## 3. Recommended Approach
 
-**Direct Adjustment** — update `epics.md` in-place with before/after edits. No rollback, no sprint restructuring.
+**Selected path:** Option 1 — Direct Adjustment
 
-- Effort: Low
-- Risk: Low
-- Timeline impact: None (code already implemented and reviewed)
+### Option evaluation
+
+- **Option 1: Direct Adjustment** — Viable
+  - Effort: Medium
+  - Risk: Low
+  - Notes: Correct the implementation artifact, sprint tracking, and source files directly
+
+- **Option 2: Potential Rollback** — Not viable
+  - Effort: High relative to value
+  - Risk: Medium
+  - Notes: Full rollback is unnecessary; only the drifted 5.2 slice needs correction
+
+- **Option 3: PRD MVP Review** — Not viable
+  - Effort: Unnecessary
+  - Risk: Low
+  - Notes: The approved MVP is still achievable and already clear
+
+### Rationale
+
+Direct adjustment preserves momentum, minimizes change surface, and restores alignment between planning and implementation. The issue is not strategic ambiguity. It is a local execution error in one story and its dependent artifacts.
+
+### Timeline and risk
+
+- Timeline impact: Low
+- Delivery risk: Low
+- Main risk if uncorrected: repeated reimplementation churn caused by the wrong feature remaining in both code and artifacts
 
 ---
 
 ## 4. Detailed Change Proposals
 
-### Change 1 — FR7 in Requirements Inventory
+### A. Story artifact corrections
+
+#### Change A1 — Story 5.2 title and user story
+
+**Artifact:** `_bmad-output/implementation-artifacts/5-2-switch-between-dark-and-light-mode.md`
 
 **OLD:**
-> FR7: At 18:00, if unresolved tasks exist in the current period, a non-blocking end-of-day reminder banner is shown immediately (even if the app is already open). At 00:01, a blocking migration ritual modal is shown immediately in-session, preventing further interaction until the user resolves or dismisses all unresolved tasks.
+
+```md
+# Story 5.2: Switch Between Dark and Light Mode
+
+As a user,
+I want to toggle between B&W and Colour modes and pick a palette,
+so that I can personalise the app's feel while keeping the BuJo aesthetic.
+```
 
 **NEW:**
-> FR7: At 18:00, if unresolved tasks exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view). On first navigation into a period view in a session, if unresolved tasks from the previous period exist and the view's ritual window is open (Daily: any day; Weekly: Monday or first app-open of the week; Monthly: 1st of month or first app-open of the month), a blocking migration prompt fires — preventing further interaction until all tasks are resolved.
 
----
+```md
+# Story 5.2: Switch Between Dark and Light Mode
 
-### Change 2 — Epic 4 intro paragraph
+As a user,
+I want to toggle between light and dark mode,
+so that I can use the app comfortably in different lighting conditions.
+```
+
+**Rationale:** Restores the story to the approved Epic 5 requirement.
+
+#### Change A2 — Story 5.2 acceptance criteria and tasks
+
+**OLD direction:**
+
+- B&W default
+- Colour mode with palette dots
+- Palette switching across tabs, glyphs, and CTAs
+- Return to B&W mode
+
+**NEW direction:**
+
+- Light mode default
+- Sun/moon ThemeSwitcher toggles to dark mode
+- Dark mode applies near-black background, off-white text, and grain/noise texture
+- Toggling back restores light mode
+- Mode persists across reloads
+- Theme changes remain immediate
+
+**Rationale:** Replaces the wrong implementation target with the approved acceptance surface.
+
+#### Change A3 — Story file identity
 
 **OLD:**
-> At 18:00, users are reminded to deal with unresolved tasks via a non-blocking banner. At 00:01, a blocking modal prevents further interaction until tasks are resolved. Users can also filter the active view to hide completed tasks or notes.
+
+- File path: `_bmad-output/implementation-artifacts/5-2-switch-between-dark-and-light-mode.md`
 
 **NEW:**
-> At 18:00, users are reminded to deal with unresolved tasks via a non-blocking banner. On first navigation into a period view (Daily/Weekly/Monthly), a blocking migration ritual fires if the view's period window is open and unresolved tasks exist from the previous period — preventing further interaction until tasks are resolved. Users can also filter the active view to hide completed tasks or notes.
 
----
+- File path: `_bmad-output/implementation-artifacts/5-2-switch-between-dark-and-light-mode.md`
 
-### Change 3 — Story 4.1 title and user story
+**Rationale:** The file name should not continue advertising the wrong feature.
+
+### B. Sprint tracking corrections
+
+#### Change B1 — Reset Story 5.2 tracking to the correct slug and status
+
+**Artifact:** `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 **OLD:**
-> Story 4.1: Migration Ritual — Time-Triggered Banner & Blocking Prompt
-> As a user, I want to be reminded at 18:00 … and be required to act on them at 00:01…
+
+```yaml
+epic-5:
+  5-2-switch-between-dark-and-light-mode: ready-for-dev
+```
 
 **NEW:**
-> Story 4.1: Migration Ritual — Evening Banner & Per-View Blocking Prompt
-> As a user, I want to be reminded at 18:00 … and be required to deal with them when I next open a period view…
 
----
+```yaml
+epic-5:
+  5-2-switch-between-dark-and-light-mode: ready-for-dev
+```
 
-### Change 4 — Story 4.1 blocking modal AC section
+**Rationale:** The story slug should match the corrected implementation artifact and approved requirement.
 
-Replaced "00:01 TRIGGER" section with "NAVIGATION TRIGGER" covering:
-- Per-view ritual window rules (Daily/Monday/1st-of-month + gap detection)
-- Independent per-view firing
-- Queue scoped to that view's previous period
+### C. Source code corrections
 
----
+#### Change C1 — Simplify theme hook
 
-### Change 5 — Story 4.1 Design Decisions
+**Artifact:** `src/hooks/useTheme.ts`
 
-Replaced interval/00:01 hook description with:
-- `useTimeReminder` — banner-only, boolean callback, flag set only on actual display
-- Navigation-based ritual via `useEffect([view, isLoading, entries])`
-- `shouldFireRitualForView()` with per-view window logic
-- `prevLastOpen` from localStorage for gap detection
-- `ritualQueue` as stable `useState` (captured at open time)
-- `shownRitualViews` ref Set for once-per-session-per-view guard
+**OLD:**
+
+```ts
+type ColorMode = 'bw' | 'color'
+type ThemeKey = 'warm' | 'cool' | 'sage' | 'terracotta' | 'slate'
+...
+const [colorMode, setColorMode] = useState<ColorMode>('bw')
+const [activeTheme, setActiveTheme] = useState<ThemeKey>('warm')
+```
+
+**NEW:**
+
+```ts
+type ToneMode = 'light' | 'dark'
+...
+const [tone, setTone] = useState<ToneMode>('light')
+```
+
+And:
+
+- persist selected tone to localStorage
+- restore persisted tone on app load
+- expose only `themeStyle`, `isDark`, and `toggleDark`
+
+**Rationale:** Removes the unapproved theme axis and adds the approved persistence requirement.
+
+#### Change C2 — Remove colour switcher UI
+
+**Artifact:** `src/components/HeaderBar.tsx`
+
+**OLD:**
+
+- B&W/Colour button
+- palette dot group
+- dark/light icon button
+
+**NEW:**
+
+- retain bullet-key button
+- retain sun/moon dark-light toggle only
+- remove palette UI entirely
+
+**Rationale:** Matches the approved ThemeSwitcher behavior.
+
+#### Change C3 — Remove colour-mode app wiring
+
+**Artifact:** `src/components/App.tsx`
+
+**OLD:**
+
+- passes `colorMode`, `onToggleColorMode`, `activeTheme`, `onSetTheme`
+- sets `data-color-mode` on app root
+
+**NEW:**
+
+- remove colour-mode props and state wiring
+- keep only dark/light theme props from `useTheme`
+- remove `data-color-mode`
+
+**Rationale:** Collapses the app shell back to the approved theme model.
+
+#### Change C4 — Remove colour-mode CSS branches
+
+**Artifact:** `src/styles/bj.css`
+
+**OLD:**
+
+- `.bj-app[data-color-mode="color"] .bj-glyph...`
+- `.bj-app[data-color-mode="color"] .bj-submit...`
+- `.bj-theme-dots`, `.bj-theme-dot`
+
+**NEW:**
+
+- delete all colour-mode-only selectors
+- keep dark/light tokens only
+- use ink-based styling where accent tokens are no longer needed
+
+**Rationale:** Removes dead feature styling and prevents UI drift.
 
 ---
 
 ## 5. Implementation Handoff
 
-**Scope classification:** Minor
+**Scope classification:** Moderate
 
-All code changes are already implemented and verified (`npm run build` clean). This proposal covers spec alignment only.
+### Handoff recipients and responsibilities
 
-**Files updated:**
-- `_bmad-output/planning-artifacts/epics.md` — all 5 changes applied
+- **Developer agent**
+  - Correct Story 5.2 implementation artifact
+  - Rename the Story 5.2 file slug
+  - Update `sprint-status.yaml`
+  - Remove colour-mode implementation from source
+  - Add theme persistence for dark/light mode
+  - Validate with `npm run build` and a browser check of the header toggle
 
-**No further implementation required.** The Developer agent can proceed to the next story.
+- **Product Owner / Developer coordination**
+  - Confirm the corrected story slug is the one used for future sprint tracking
+  - Ensure no further work references the retired B&W/Colour story name
+
+### Success criteria
+
+- Story 5.2 artifact describes only light/dark mode
+- Sprint tracking references only the corrected Story 5.2 slug and status
+- Header shows only bullet key plus dark/light toggle
+- No palette dots or B&W/Colour control remain
+- Theme preference persists across reloads
+- Build passes cleanly
+
+### High-level action plan
+
+1. Replace the wrong 5.2 implementation artifact with the corrected light/dark version
+2. Rename the story slug in implementation artifacts and sprint tracking
+3. Remove colour-mode code path from theme hook, header, app shell, and CSS
+4. Add localStorage-backed dark/light persistence
+5. Rebuild and visually verify the ThemeSwitcher behavior
 
 ---
 
-*Correct Course workflow complete, Gretafarnedi!*
+## 6. Workflow Status
+
+Checklist summary:
+
+- 1.1 Trigger identified — [x] Done
+- 1.2 Core problem defined — [x] Done
+- 1.3 Evidence collected — [x] Done
+- 2.1 Epic impact assessed — [x] Done
+- 2.2 Epic-level changes identified — [x] Done
+- 2.3 Future epics reviewed — [x] Done
+- 2.4 New/invalid epics checked — [N/A]
+- 2.5 Priority/order check — [x] Done
+- 3.1 PRD conflict check — [x] Done
+- 3.2 Architecture conflict check — [N/A] (document not present)
+- 3.3 UX conflict check — [x] Done
+- 3.4 Secondary artifact check — [x] Done
+- 4.1 Option 1 evaluated — [x] Viable
+- 4.2 Option 2 evaluated — [x] Not viable
+- 4.3 Option 3 evaluated — [x] Not viable
+- 4.4 Path selected — [x] Done
+- 5.1 Issue summary — [x] Done
+- 5.2 Impact and artifact adjustments — [x] Done
+- 5.3 Recommended path with rationale — [x] Done
+- 5.4 MVP impact and action plan — [x] Done
+- 5.5 Agent handoff plan — [x] Done
+- 6.1 Checklist completion review — [x] Done
+- 6.2 Proposal consistency review — [x] Done
+- 6.3 User approval — [ ] Pending
+- 6.4 Sprint-status update to approved changes — [ ] Pending final approval
+- 6.5 Confirm next steps and handoff — [ ] Pending final approval
+
+Correct Course workflow in progress, Gretafarnedi.

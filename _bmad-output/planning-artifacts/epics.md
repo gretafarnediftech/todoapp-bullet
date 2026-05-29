@@ -22,7 +22,6 @@ This document provides the complete epic and story breakdown for the BuJo Todo A
 FR1: User can create a new entry (task or event) in any view by selecting an entry type and typing text
 FR2: User can navigate between four independent views: Daily, Weekly, Monthly, Backlog via tab navigation
 FR3: User can mark a task as completed (· → X) triggering an SVG hand-drawn animation
-FR4: User can mark a task as migrated (· → >) and choose a destination view via a "When?" prompt
 FR5: User can unmark a task as completed and revert it to the uncompleted status
 FR6: User can permanently delete any entry from the current view
 FR7: At 18:00 local hour, if unresolved tasks exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view). 
@@ -32,7 +31,6 @@ FR10: Each entry displays a symbol, text, and an optional formatted `when` label
 FR11: App displays an empty state when no entries exist in the current view
 FR12: App displays a loading state on initial data fetch (simulated 1000ms delay)
 FR13: App displays an error state when data retrieval fails (simulated), with a retry action
-FR14: User can unmark a task as migrated to tomorrow and revert it to the uncompleted status. 
 
 ### NonFunctional Requirements
 
@@ -55,10 +53,10 @@ NFR7: The prototype must feel production-ready despite minimal scope
 
 ### UX Design Requirements
 
-UX-DR1: Six BuJo symbols rendered correctly — `·` (task), animated SVG `×` (completed), `>` (migrated), `<` (scheduled), `○` (event), `–` (note)
+UX-DR1: Five BuJo symbols rendered correctly — `·` (task), animated SVG `×` (completed), `>` (migrated), `○` (event), `–` (note)
 UX-DR2: Task completion animation — SVG `×` drawn via stroke-dashoffset in two sequential diagonal strokes (~150ms each)
-UX-DR3: Completed, migrated, and scheduled entries display text at 28% opacity (dim) — no strikethrough; strikethrough is reserved for `originalText` when an entry was edited
-UX-DR4: Entries display symbol + text; optional formatted `when` label (time/date) when scheduled; migrated entries additionally show `→ destination` tag in muted Inter text
+UX-DR3: Completed and migrated entries display text at 28% opacity (dim) — no strikethrough; strikethrough is reserved for `originalText` when an entry was edited
+UX-DR4: Entries display symbol + text; optional formatted `when` label (time/date) when set; migrated entries additionally show `→ destination` tag in muted Inter text
 UX-DR5: Tab navigation — horizontal tab bar with icon + label (Inter) per tab; icons: ✦ Daily, ≡ Weekly, ⊞ Monthly, ≡ Future Log
 UX-DR6: MigrationPrompt — modal for unresolved tasks from previous day, week, OR month
 UX-DR7: ThemeSwitcher — Light/Dark toggle (sun/moon icon, top-right); dark mode applies grain/noise CSS texture
@@ -78,7 +76,6 @@ UX-DR17: reminder banner
 FR1: Epic 2 — Entry creation via EntryInput + SymbolPicker
 FR2: Epic 1 — ViewTabs navigation and view-scoped rendering
 FR3: Epic 3 — Task completion with SVG animation (BulletSymbol)
-FR4: Epic 3 — Task migration with "When?" prompt (EntryActions)
 FR5: Epic 3 — Unmark task as completed, revert to active (BulletSymbol / EntryActions)
 FR6: Epic 2 — Entry deletion via EntryActions
 FR7: Epic 4 — End-of-period reminder banner at 18:00 (EndOfPeriodBanner)
@@ -88,7 +85,6 @@ FR10: Epic 2 — Entry display: symbol + text + optional `when` label (EntryRow)
 FR11: Epic 1 — EmptyState component within EntryList
 FR12: Epic 1 — LoadingState component + simulated 1000ms delay in useEntries
 FR13: Epic 1 — ErrorState component + retryLoad in useEntries
-FR14: Epic 3 — Unmark task as migrated to tomorrow, revert to active (EntryActions)
 
 ---
 
@@ -99,19 +95,19 @@ Users can open the app, see it load correctly, navigate between the four BuJo vi
 **FRs covered:** FR2, FR11, FR12, FR13
 
 ### Epic 2: Entry Management (Core CRUD)
-Users can create new entries, view the full list of entries for the active view, and delete entries. Each entry correctly displays its BuJo symbol, text, and optional scheduled time/date when set.
+Users can create new entries, view the full list of entries for the active view, and delete entries. Each entry correctly displays its BuJo symbol, text, and optional time/date when set.
 **FRs covered:** FR1, FR6, FR10
 
 ### Epic 3: Task State Transitions
-Users can change the state of a task — completing it with a hand-drawn X animation, migrating it with a destination prompt, scheduling it to the Backlog, or reverting completed and migrated tasks back to active.
-**FRs covered:** FR3, FR4, FR5, FR14
+Users can mark a task as complete with a hand-drawn X animation, or revert it back to active.
+**FRs covered:** FR3, FR5
 
 ### Epic 4: Migration Ritual
 Users are reminded at 18:00 about unresolved tasks and guided through the blocking migration ritual when navigating into a period view after an unresolved period.
 **FRs covered:** FR7, FR8
 
 ### Epic 5: Visual Theme & Dark/Light Mode
-Users experience the full BuJo visual theme (Kalam font, ivory background, dot grid) and can switch between light and dark modes.
+Users experience the full BuJo visual theme (Kalam font, ivory background, dot grid) and can switch between dark and light modes.
 **FRs covered:** FR9
 
 ---
@@ -317,7 +313,7 @@ So that I can keep my lists clean without migrating everything.
 
 ## Epic 3: Task State Transitions
 
-Users can change the state of existing task entries: completing them with an animated X, migrating them forward with a destination prompt, or scheduling them to the Backlog.
+Users can mark a task complete with an animated X, or revert it back to active.
 
 ### Story 3.1: Complete a Task with SVG Animation
 
@@ -354,90 +350,6 @@ So that completing a task feels satisfying and visually distinct from the paper 
 - After animation: the circle appears filled (solid ink); event text dims to 28% opacity (same as tasks, no strikethrough)
 - The fill animation should feel sequential and organic, consistent with the X drawing animation — not a CSS `opacity` fade
 - `completeEntry(id)` already handles `done` status; ensure it works for `type: 'event'` entries as well as `type: 'task'`
-
----
-
-### Story 3.2: Migrate a Task with "When?" Prompt
-
-As a user,
-I want to migrate a task to a future view and be asked where to send it,
-So that I can reschedule work following the BuJo migration ritual.
-
-**Acceptance Criteria:**
-
-**Given** I hover over a task entry (symbol = `·`)
-**When** the EntryActions appear and I click/tap "Migrate"
-**Then** an inline "When?" prompt appears with four options: Today (Daily), This Week (Weekly), This Month (Monthly), Backlog
-**When** I select a destination
-**Then** the current entry's symbol changes to `>` and its text opacity reduces to 28% (dim, no strikethrough)
-**And** the entry remains visible in the current view with the `>` symbol
-**And** a new task entry (symbol = `·`) is created in the destination view with the same text
-**And** the "When?" prompt closes
-**And** if I press Escape or click outside the prompt, it closes without any change
-
-**Design Decisions:**
-- "When?" prompt is an inline popover anchored to the EntryActions area
-- Migrate/move action is shown for **both** `type: 'task'` and `type: 'event'` entries — not just tasks (Fix 4)
-- `migrateEntry(id, destinationView)` handles symbol update + new entry creation in `useEntries`
-
-**Revised Migration Behaviour (Fix 8 — replaces original spec):**
-
-The original spec had all migrated entries remain in the source list with a `>` symbol. The revised behaviour splits into two cases:
-
-- **"Tomorrow" destination (Daily view only):**
-  - The entry stays in the source list with `>` symbol and `→ tomorrow` label (unchanged from original)
-  - A copy is also created in the Daily view's tomorrow entries (stored with a `when` date = tomorrow's date, `YYYY-MM-DD`)
-  - At midnight (or on next app open after midnight), tomorrow's entries appear in the Daily view — the user sees the task they deferred
-  - `migrateEntry(id, 'daily', { tomorrow: true })` stores the copy with the future date
-
-- **All other destinations (This Week / This Month / Future Log / Backlog):**
-  - The entry is **moved** (not copied): it disappears from the source list entirely
-  - It appears immediately in the destination view's list
-  - No `>` symbol remains in the source — the entry is gone from the source
-  - `migrateEntry(id, destinationView)` removes from source and adds to destination in `useEntries` state
-
-**Undo Migration (Fix 6):**
-- After a non-tomorrow migration, the moved entry in the **destination** view displays a small undo icon (← or ↩) on hover
-- Clicking the undo icon reverses the migration: entry is removed from destination and re-added to the original source view with its original symbol (`task` or `event`, status `active`)
-- The undo icon is only visible on hover (desktop) / as an inline icon (mobile), consistent with the delete action pattern
-- Undo is available for the session only (no persistence across page reloads in v1)
-- `undoMigration(id, sourceView, destinationView)` in `useEntries` handles the reversal
-- For "tomorrow" entries (the copy in Daily): no undo needed — the user can simply delete the future copy
-
-**Undo Tomorrow Migration (FR14):**
-
-**Given** I see an entry in the source view with a `>` symbol and `→ tomorrow` label
-**When** I click/tap the undo icon on that entry
-**Then** the `>` symbol reverts to `·` and the `→ tomorrow` label is removed
-**And** the corresponding future copy in the Daily view (tomorrow's date) is also deleted
-**And** the reversal is immediate with no additional prompt
-
-**Design Decisions:**
-- `undoTomorrowMigration(id)` in `useEntries` reverts the source entry to `active` / `task` symbol and removes the tomorrow copy from the Daily entries by matching `when` date + original text
-
----
-
-### Story 3.3: Schedule a Task to Backlog
-
-> **Note:** This story is not tied to a dedicated FR but is required by UX-DR1 (`<` scheduled symbol) and the BuJo system logic. It is retained as a UX-driven story.
-
-As a user,
-I want to mark a task as scheduled (moved to the future log/backlog),
-So that I can defer open-ended tasks without specifying an exact date.
-
-**Acceptance Criteria:**
-
-**Given** I hover over a task entry (symbol = `·`)
-**When** the EntryActions appear and I click/tap "Schedule to Backlog"
-**Then** the current entry's symbol changes to `<` and its text opacity reduces to 28% (dim, no strikethrough)
-**And** the entry remains visible in the current view with the `<` symbol
-**And** a new task entry (symbol = `·`) is created in the Backlog view with the same text
-**And** the action is immediate with no additional prompt
-
-**Design Decisions:**
-- "Schedule to Backlog" is a separate, simpler action from Migrate (no destination choice needed)
-- `scheduleEntry(id)` in `useEntries` updates symbol + creates Backlog entry
-- The `<` symbol is rendered as a static character (no animation)
 
 ---
 
@@ -532,7 +444,7 @@ So that the aesthetic matches the calm, minimal, handwritten quality of a paper 
 
 ---
 
-### Story 5.2: Switch Between Light and Dark Mode
+### Story 5.2: Switch Between Dark and Light Mode
 
 As a user,
 I want to toggle between light and dark mode,

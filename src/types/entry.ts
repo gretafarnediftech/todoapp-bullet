@@ -1,5 +1,5 @@
 export type EntryView = 'daily' | 'weekly' | 'monthly' | 'backlog'
-export type EntryStatus = 'active' | 'done' | 'migrated' | 'scheduled'
+export type EntryStatus = 'active' | 'done' | 'migrated'
 export type EntryType = 'task' | 'event'
 export type Palette = 'bw' | 'dark'
 export type DemoState = 'normal' | 'empty' | 'loading' | 'error' | 'reminder' | 'migration'
@@ -18,6 +18,8 @@ export interface Entry {
   when?: string
   /** Relative label shown after migrated text, e.g. 'tomorrow', 'this week' */
   migratedTo?: string
+  /** Source entry id when this entry was created as a migration copy */
+  migratedFromId?: string
   /** Previous text before edit, shown struck-through above current text */
   originalText?: string
   completedAt?: number

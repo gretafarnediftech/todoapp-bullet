@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { EntryView, MigDecisionKind, MigrationItem } from '../types/entry'
 import { MIGRATION_QUEUE } from '../data/seed'
-import { useEntries, unresolvedFromPreviousPeriod, startOfThisWeek, startOfThisMonth } from '../hooks/useEntries'
+import { useEntries, unresolvedFromPreviousPeriod, startOfToday, startOfThisWeek, startOfThisMonth } from '../hooks/useEntries'
 import { useTheme } from '../hooks/useTheme'
 import { useTimeReminder } from '../hooks/useTimeReminder'
 
@@ -54,14 +54,17 @@ interface BuJoAppProps {
   retryLoad: ReturnType<typeof useEntries>['retryLoad']
   simulateError: ReturnType<typeof useEntries>['simulateError']
   cycle: ReturnType<typeof useEntries>['cycle']
+  unmigrate: ReturnType<typeof useEntries>['unmigrate']
   add: ReturnType<typeof useEntries>['add']
   edit: ReturnType<typeof useEntries>['edit']
   remove: ReturnType<typeof useEntries>['remove']
   migrate: ReturnType<typeof useEntries>['migrate']
+  undoMigration: ReturnType<typeof useEntries>['undoMigration']
+  migratedDestIds: ReturnType<typeof useEntries>['migratedDestIds']
   resolveMigration: ReturnType<typeof useEntries>['resolveMigration']
 }
 
-function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading, hasError, retryLoad, simulateError, cycle, add, edit, remove, migrate, resolveMigration }: BuJoAppProps) {
+function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading, hasError, retryLoad, simulateError, cycle, unmigrate, add, edit, remove, migrate, undoMigration, migratedDestIds, resolveMigration }: BuJoAppProps) {
   const [view, setView] = useState<EntryView>('daily')
   const [migrationOpen, setMigrationOpen] = useState<null | 'reminder' | 'ritual'>(null)
   const [legendOpen, setLegendOpen] = useState(false)
@@ -81,9 +84,11 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
   // Track which views have already shown their ritual this session
   const shownRitualViews = useRef<Set<EntryView>>(new Set())
 
-  // Navigation-triggered ritual: fires on first entry to each view per session
+  // Navigation-triggered ritual: fires on first entry to each view per session.
+  // Gated to before 18:00 — after that, the evening banner (useTimeReminder) owns the window.
   useEffect(() => {
     if (isLoading || view === 'backlog') return
+    if (new Date().getHours() >= 18) return
     if (shownRitualViews.current.has(view)) return
     if (!shouldFireRitualForView(view, prevLastOpen.current)) return
 
@@ -103,8 +108,17 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
   const pad = mobile ? '14px 16px' : '28px 52px'
 
   // Active tasks in the current period — drives 18:00 banner condition
+  // Exclude entries created before this period's boundary so yesterday's tasks
+  // don't trigger the banner before the migration ritual has been run.
   const activePeriodTasks = view !== 'backlog'
-    ? entries.filter((e) => e.view === view && e.type === 'task' && e.status === 'active')
+    ? entries.filter((e) => {
+        if (e.view !== view || e.type !== 'task' || e.status !== 'active') return false
+        const boundary =
+          view === 'daily'   ? startOfToday() :
+          view === 'weekly'  ? startOfThisWeek() :
+          view === 'monthly' ? startOfThisMonth() : 0
+        return (e.createdAt ?? 0) >= boundary
+      })
     : []
 
   useTimeReminder(() => {
@@ -176,6 +190,9 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
                   onMigrate={migrate}
                   onDelete={remove}
                   onEdit={edit}
+                  canUndo={migratedDestIds.has(e.id)}
+                  onUndo={undoMigration}
+                  onUnmigrate={unmigrate}
                 />
               ))}
             </div>
@@ -221,6 +238,7 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
         <MigrationPrompt
           canDefer={migrationOpen === 'reminder'}
           queue={migrationOpen === 'ritual' ? ritualQueue : MIGRATION_QUEUE}
+          view={migrationOpen === 'ritual' ? view : undefined}
           onClose={() => setMigrationOpen(null)}
           onResolve={(decisions: Record<string, MigDecisionKind>) => {
             resolveMigration(decisions, migrationOpen === 'ritual' ? ritualQueue : MIGRATION_QUEUE)
