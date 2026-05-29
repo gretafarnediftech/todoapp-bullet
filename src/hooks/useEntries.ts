@@ -17,6 +17,34 @@ function getTomorrowDateStr(): string {
   return `${y}-${m}-${day}`
 }
 
+function getTodayDateStr(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * Remove `→ tomorrow` source entries whose scheduled date has arrived.
+ * The daily copy (with `when = tomorrow's date`) stays; the dimmed source disappears.
+ * Also cleans up orphaned tomorrow-migrated sources that have no copy.
+ */
+function cleanExpiredTomorrowMigrations(entries: Entry[]): Entry[] {
+  const todayStr = getTodayDateStr()
+  const expiredSourceIds = new Set<string>()
+  for (const e of entries) {
+    if (e.status !== 'migrated' || e.migratedTo !== 'tomorrow') continue
+    const copy = entries.find((c) => c.migratedFromId === e.id)
+    if (!copy || (copy.when && copy.when <= todayStr)) {
+      expiredSourceIds.add(e.id)
+    }
+  }
+  return expiredSourceIds.size === 0
+    ? entries
+    : entries.filter((e) => !expiredSourceIds.has(e.id))
+}
+
 import { SEED_ENTRIES } from '../data/seed'
 
 const STORAGE_KEY = 'bj-entries'
@@ -74,11 +102,11 @@ export function unresolvedFromPreviousPeriod(entries: Entry[], view: EntryView):
   return entries
     .filter((e) =>
       e.view === view &&
-      e.type === 'task' &&
-      e.status === 'active' &&
+      (e.type === 'task' || e.type === 'event') &&
+      e.status !== 'done' &&
       resolveCreatedAt(e) < beforeTs,
     )
-    .map((e) => ({ id: e.id, text: e.text }))
+    .map((e) => ({ id: e.id, text: e.text, type: e.type }))
 }
 
 function saveEntries(entries: Entry[]) {
@@ -125,7 +153,10 @@ export function useEntries() {
       return
     }
     loadTimerRef.current = setTimeout(() => {
-      setEntries(loadEntries())
+      const loaded = loadEntries()
+      const cleaned = cleanExpiredTomorrowMigrations(loaded)
+      if (cleaned !== loaded) saveEntries(cleaned)
+      setEntries(cleaned)
       setIsLoading(false)
       loadTimerRef.current = null
     }, 1000)
@@ -138,7 +169,10 @@ export function useEntries() {
     setIsLoading(true)
     setEntries([])
     loadTimerRef.current = setTimeout(() => {
-      setEntries(loadEntries())
+      const loaded = loadEntries()
+      const cleaned = cleanExpiredTomorrowMigrations(loaded)
+      if (cleaned !== loaded) saveEntries(cleaned)
+      setEntries(cleaned)
       setIsLoading(false)
       loadTimerRef.current = null
     }, 1000)
@@ -271,10 +305,11 @@ export function useEntries() {
 
   const resolveMigration = useCallback((
     decisions: Record<string, MigDecisionKind>,
-    queue: { id: string; text: string }[],
+    queue: MigrationItem[],
   ) => {
     const newEntries: Entry[] = []
     const updates: Record<string, Partial<Entry>> = {}
+    const droppedIds = new Set<string>()
 
     for (const item of queue) {
       const decision = decisions[item.id]
@@ -285,27 +320,29 @@ export function useEntries() {
           break
         case 'today':
           updates[item.id] = { status: 'migrated', migratedTo: 'today' }
-          newEntries.push({ id: newId(), view: 'daily',   type: 'task', text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
+          newEntries.push({ id: newId(), view: 'daily',   type: item.type, text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
           break
         case 'weekly':
           updates[item.id] = { status: 'migrated', migratedTo: 'this week' }
-          newEntries.push({ id: newId(), view: 'weekly',  type: 'task', text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
+          newEntries.push({ id: newId(), view: 'weekly',  type: item.type, text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
           break
         case 'monthly':
           updates[item.id] = { status: 'migrated', migratedTo: 'this month' }
-          newEntries.push({ id: newId(), view: 'monthly', type: 'task', text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
+          newEntries.push({ id: newId(), view: 'monthly', type: item.type, text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
           break
         case 'backlog':
           updates[item.id] = { status: 'migrated', migratedTo: 'future log' }
-          newEntries.push({ id: newId(), view: 'backlog', type: 'task', text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
+          newEntries.push({ id: newId(), view: 'backlog', type: item.type, text: item.text, ago: 0, status: 'active', createdAt: Date.now() })
           break
         case 'drop':
-          updates[item.id] = { status: 'done' }
+          droppedIds.add(item.id)
           break
       }
     }
 
-    const updated = entriesRef.current.map((e) => updates[e.id] ? { ...e, ...updates[e.id] } : e)
+    const updated = entriesRef.current
+      .filter((e) => !droppedIds.has(e.id))
+      .map((e) => updates[e.id] ? { ...e, ...updates[e.id] } : e)
     persist([...updated, ...newEntries])
   }, [persist])
 

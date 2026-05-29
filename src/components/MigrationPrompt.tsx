@@ -19,14 +19,22 @@ const MIG_SUBDESTS = [
   { kind: 'backlog' as MigDecisionKind, label: 'Future log', Icon: TabBacklog },
 ]
 
-function decidedGlyph(kind: MigDecisionKind): React.ReactNode {
-  if (kind === 'done')    return <span className="bj-write" style={{ fontSize: '0.85em' }}>×</span>
+function decidedGlyph(kind: MigDecisionKind, type: MigrationItem['type']): React.ReactNode {
+  if (kind === 'done') {
+    return type === 'event'
+      ? <span className="bj-write" style={{ fontSize: '0.8em' }}>●</span>
+      : <span className="bj-write" style={{ fontSize: '0.85em' }}>×</span>
+  }
   if (kind === 'today')   return <TabDaily size={22} />
   if (kind === 'weekly')  return <TabWeekly size={22} />
   if (kind === 'monthly') return <TabMonthly size={22} />
   if (kind === 'backlog') return <TabBacklog size={22} />
   if (kind === 'drop')    return <Trash size={22} opacity={0.9} />
   return <span>·</span>
+}
+
+function pendingGlyph(type: MigrationItem['type']): React.ReactNode {
+  return type === 'event' ? '○' : '·'
 }
 
 // ─── MigrationPrompt ─────────────────────────────────────────
@@ -44,6 +52,7 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
   const sectionHeader = (view && RITUAL_HEADER[view]) ?? "Yesterday's leftovers"
   const [decisions, setDecisions] = useState<Record<string, MigDecisionKind>>({})
   const [migSubOpen, setMigSubOpen] = useState<string | null>(null)
+  const [tooltip, setTooltip] = useState<{ label: string; x: number; y: number; placement: 'top' | 'bottom' } | null>(null)
   const subRef = useRef<HTMLSpanElement>(null)
   const remaining = queue.length - Object.keys(decisions).length
 
@@ -57,9 +66,21 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
     return () => document.removeEventListener('mousedown', onDoc)
   }, [migSubOpen])
 
+  useEffect(() => {
+    if (!tooltip) return
+    const clearTooltip = () => setTooltip(null)
+    window.addEventListener('scroll', clearTooltip, true)
+    window.addEventListener('resize', clearTooltip)
+    return () => {
+      window.removeEventListener('scroll', clearTooltip, true)
+      window.removeEventListener('resize', clearTooltip)
+    }
+  }, [tooltip])
+
   const decide = (id: string, kind: MigDecisionKind) => {
     setDecisions((d) => ({ ...d, [id]: kind }))
     setMigSubOpen(null)
+    setTooltip(null)
   }
   const undo = (id: string) => setDecisions((d) => { const n = { ...d }; delete n[id]; return n })
 
@@ -70,6 +91,19 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
     onResolve(decisions)
     onClose()
   }
+
+  const showTooltip = (target: HTMLButtonElement, label: string) => {
+    const rect = target.getBoundingClientRect()
+    const placement = rect.top > 84 ? 'top' : 'bottom'
+    setTooltip({
+      label,
+      x: rect.left + rect.width / 2,
+      y: placement === 'top' ? rect.top - 8 : rect.bottom + 8,
+      placement,
+    })
+  }
+
+  const hideTooltip = () => setTooltip(null)
 
   // All-clear: empty queue
   if (queue.length === 0) {
@@ -116,7 +150,7 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
               <li key={q.id} className={`bj-mig-item${d ? ` decided d-${d}` : ''}`}>
                 <span className="bj-mig-glyph bj-write">
                   <span key={d ?? 'pending'} className="bj-mig-glyph-frame">
-                    {d ? decidedGlyph(d) : '·'}
+                    {d ? decidedGlyph(d, q.type) : pendingGlyph(q.type)}
                   </span>
                 </span>
 
@@ -131,11 +165,27 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
                 ) : (
                   <div className="bj-mig-opts">
                     {/* done */}
-                    <button className="bj-mig-opt" onClick={() => decide(q.id, 'done')} aria-label="Mark done" data-tip="Mark done">
-                      <span className="bj-mig-opt-glyph bj-write">×</span>
+                    <button
+                      className="bj-mig-opt"
+                      onClick={() => decide(q.id, 'done')}
+                      onMouseEnter={(e) => showTooltip(e.currentTarget, 'Mark done')}
+                      onMouseLeave={hideTooltip}
+                      onFocus={(e) => showTooltip(e.currentTarget, 'Mark done')}
+                      onBlur={hideTooltip}
+                      aria-label="Mark done"
+                    >
+                      <span className="bj-mig-opt-glyph bj-write">{q.type === 'event' ? '●' : '×'}</span>
                     </button>
                     {/* today */}
-                    <button className="bj-mig-opt" onClick={() => decide(q.id, 'today')} aria-label="Move to today" data-tip="Move to today">
+                    <button
+                      className="bj-mig-opt"
+                      onClick={() => decide(q.id, 'today')}
+                      onMouseEnter={(e) => showTooltip(e.currentTarget, 'Move to today')}
+                      onMouseLeave={hideTooltip}
+                      onFocus={(e) => showTooltip(e.currentTarget, 'Move to today')}
+                      onBlur={hideTooltip}
+                      aria-label="Move to today"
+                    >
                       <span className="bj-mig-opt-icon"><TabDaily size={18} /></span>
                     </button>
                     {/* migrate → submenu */}
@@ -143,9 +193,12 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
                       <button
                         className={`bj-mig-opt${migSubOpen === q.id ? ' on' : ''}`}
                         onClick={() => setMigSubOpen(migSubOpen === q.id ? null : q.id)}
+                        onMouseEnter={(e) => showTooltip(e.currentTarget, 'Migrate to…')}
+                        onMouseLeave={hideTooltip}
+                        onFocus={(e) => showTooltip(e.currentTarget, 'Migrate to…')}
+                        onBlur={hideTooltip}
                         aria-label="Migrate to…"
                         aria-expanded={migSubOpen === q.id}
-                        data-tip="Migrate to…"
                       >
                         <span className="bj-mig-opt-icon"><MigrateIcon /></span>
                       </button>
@@ -161,7 +214,15 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
                       )}
                     </span>
                     {/* drop */}
-                    <button className="bj-mig-opt" onClick={() => decide(q.id, 'drop')} aria-label="Drop" data-tip="Let it go">
+                    <button
+                      className="bj-mig-opt"
+                      onClick={() => decide(q.id, 'drop')}
+                      onMouseEnter={(e) => showTooltip(e.currentTarget, 'Let it go')}
+                      onMouseLeave={hideTooltip}
+                      onFocus={(e) => showTooltip(e.currentTarget, 'Let it go')}
+                      onBlur={hideTooltip}
+                      aria-label="Drop"
+                    >
                       <span className="bj-mig-opt-icon"><Trash size={18} /></span>
                     </button>
                   </div>
@@ -170,6 +231,16 @@ export function MigrationPrompt({ canDefer = true, queue = MIGRATION_QUEUE, view
             )
           })}
         </ul>
+
+        {tooltip && (
+          <div
+            className={`bj-mig-tooltip bj-mig-tooltip-${tooltip.placement}`}
+            style={{ left: tooltip.x, top: tooltip.y }}
+            role="tooltip"
+          >
+            {tooltip.label}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="bj-mig-foot">

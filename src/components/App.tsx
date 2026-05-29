@@ -100,29 +100,50 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
     setMigrationOpen('ritual')
   }, [view, isLoading, entries])
 
+  // Period boundary for display filtering (null = no filter, i.e. Backlog)
+  const periodBoundary =
+    view === 'daily'   ? startOfToday() :
+    view === 'weekly'  ? startOfThisWeek() :
+    view === 'monthly' ? startOfThisMonth() :
+    null
+
   // Sort: oldest at top, newest at bottom (BuJo page fill direction)
+  // Entries from previous periods are excluded from period views (FR14)
   const visible = entries
-    .filter((e) => e.view === view)
+    .filter((e) => {
+      if (e.view !== view) return false
+      if (periodBoundary !== null && (e.createdAt ?? 0) < periodBoundary) return false
+      // Hide daily entries whose `when` is a future date (e.g. "tomorrow" migration copies)
+      if (view === 'daily' && e.when && /^\d{4}-\d{2}-\d{2}$/.test(e.when)) {
+        const d = new Date()
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        if (e.when > todayStr) return false
+      }
+      return true
+    })
     .sort((a, b) => b.ago - a.ago)
 
   const pad = mobile ? '14px 16px' : '28px 52px'
 
-  // Active tasks in the current period — drives 18:00 banner condition
-  // Exclude entries created before this period's boundary so yesterday's tasks
+  // Active tasks and unresolved events in the current period — drives 18:00 banner condition.
+  // Exclude entries created before this period's boundary so yesterday's entries
   // don't trigger the banner before the migration ritual has been run.
   const activePeriodTasks = view !== 'backlog'
     ? entries.filter((e) => {
         if (e.view !== view || e.type !== 'task' || e.status !== 'active') return false
-        const boundary =
-          view === 'daily'   ? startOfToday() :
-          view === 'weekly'  ? startOfThisWeek() :
-          view === 'monthly' ? startOfThisMonth() : 0
-        return (e.createdAt ?? 0) >= boundary
+        return (e.createdAt ?? 0) >= (periodBoundary ?? 0)
+      })
+    : []
+
+  const activePeriodEvents = view !== 'backlog'
+    ? entries.filter((e) => {
+        if (e.view !== view || e.type !== 'event' || e.status !== 'active') return false
+        return (e.createdAt ?? 0) >= (periodBoundary ?? 0)
       })
     : []
 
   useTimeReminder(() => {
-    if (activePeriodTasks.length > 0) {
+    if (activePeriodTasks.length > 0 || activePeriodEvents.length > 0) {
       setShowBanner(true)
       return true
     }
@@ -133,6 +154,7 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
     <div
       className="bj-app"
       data-grid="dot"
+      data-theme={isDark ? 'dark' : 'light'}
       data-mobile={mobile ? '1' : undefined}
       style={{
         ...themeStyle,
@@ -167,7 +189,7 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
         <div style={{ maxWidth: 1048, margin: '0 auto', width: '100%', padding: pad, boxSizing: 'border-box', position: 'relative' }}>
           <ViewHeader view={view} mobile={mobile} showDoodles />
 
-          {showBanner && activePeriodTasks.length > 0 && (
+          {showBanner && (activePeriodTasks.length > 0 || activePeriodEvents.length > 0) && (
             <EndOfPeriodBanner view={view} onDismiss={() => setShowBanner(false)} />
           )}
 
@@ -207,23 +229,38 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
           </div>
 
           {import.meta.env.DEV && (
-            <div style={{ padding: '0 10px', marginTop: 8 }}>
-              <button
-                onClick={simulateError}
-                style={{
-                  fontSize: 11,
-                  opacity: 0.4,
-                  background: 'transparent',
-                  border: '1px dashed currentColor',
-                  borderRadius: 4,
-                  padding: '2px 8px',
-                  cursor: 'pointer',
-                  color: 'inherit',
-                  fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                [dev] simulate error
-              </button>
+            <div style={{ padding: '0 10px', marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {([  
+                { label: '[dev] simulate error',      action: simulateError },
+                { label: '[dev] simulate new day',     action: () => {
+                  if (view === 'backlog') return
+                  const queue = entries
+                    .filter((e) => e.view === view && (e.type === 'task' || e.type === 'event') && e.status !== 'done')
+                    .map((e) => ({ id: e.id, text: e.text, type: e.type }))
+                  if (queue.length === 0) return
+                  setRitualQueue(queue)
+                  setMigrationOpen('ritual')
+                }},
+                { label: '[dev] simulate end of day',  action: () => setShowBanner(true) },
+              ] as { label: string; action: () => void }[]).map(({ label, action }) => (
+                <button
+                  key={label}
+                  onClick={action}
+                  style={{
+                    fontSize: 11,
+                    opacity: 0.4,
+                    background: 'transparent',
+                    border: '1px dashed currentColor',
+                    borderRadius: 4,
+                    padding: '2px 8px',
+                    cursor: 'pointer',
+                    color: 'inherit',
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           )}
         </div>

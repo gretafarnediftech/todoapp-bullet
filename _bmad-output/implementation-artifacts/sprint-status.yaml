@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-28
-last_updated: 2026-05-29  # story 4.2 morning-migration-ritual complete
+last_updated: 2026-05-29  # all epics 1-5 complete
 project: todo-app
 project_key: NOKEY
 tracking_system: file-system
@@ -54,19 +54,21 @@ development_status:
   2-1-display-entry-list-with-mock-data: done
   2-2-add-a-new-entry: done
   2-3-delete-an-entry: done
+  2-4-period-scoped-entry-display: done
   epic-2-retrospective: optional
 
-  epic-3: in-progress
+  epic-3: done
   3-1-complete-a-task-with-svg-animation: done
-  3-2-revert-migrated-task-to-active: review
+  3-2-revert-migrated-task-to-active: done
   epic-3-retrospective: optional
 
-  epic-4: in-progress
+  epic-4: done
   4-1-migration-ritual-prompt-on-app-open: done    # 18:00 banner — complete
-  4-2-morning-migration-ritual: review       # post-midnight navigation trigger (add hours<18 gate)
+  4-2-morning-migration-ritual: done         # post-midnight navigation trigger + events/drop amendment complete
+  4-3-events-in-end-of-period-banner: done
   epic-4-retrospective: optional
 
-  epic-5: in-progress
+  epic-5: done
   5-1-bujo-visual-theme-applied: done
-  5-2-switch-between-dark-and-light-mode: review
+  5-2-switch-between-dark-and-light-mode: done
   epic-5-retrospective: optional

@@ -1,7 +1,7 @@
 export type EntryView = 'daily' | 'weekly' | 'monthly' | 'backlog'
 export type EntryStatus = 'active' | 'done' | 'migrated'
 export type EntryType = 'task' | 'event'
-export type Palette = 'bw' | 'dark'
+export type ThemeMode = 'light' | 'dark'
 export type DemoState = 'normal' | 'empty' | 'loading' | 'error' | 'reminder' | 'migration'
 
 export interface Entry {
@@ -28,6 +28,7 @@ export interface Entry {
 export interface MigrationItem {
   id: string
   text: string
+  type: EntryType
 }
 
 export type MigDecisionKind = 'done' | 'today' | 'weekly' | 'monthly' | 'backlog' | 'drop'

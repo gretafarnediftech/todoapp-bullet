@@ -215,7 +215,7 @@ export function EntryRow({ entry, view, mobile, density = 'cozy', onCycle, onMig
         style={{
           appearance: 'none', border: 0, background: 'transparent',
           padding: 0, cursor: (entry.status === 'active' || (entry.status === 'migrated' && entry.migratedTo === 'tomorrow')) ? 'pointer' : 'default',
-          font: 'inherit',
+          font: 'inherit', color: 'inherit',
           width: 22, height: lineH, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
           fontWeight: 700, fontSize: '1.15em',

@@ -48,14 +48,14 @@ export const SEED_ENTRIES: Entry[] = [
 ]
 
 export const MIGRATION_QUEUE: MigrationItem[] = [
-  { id: 'mq1',  text: 'Sort the overflowing paper tray — file or bin' },
-  { id: 'mq2',  text: 'Cancel the second streaming service' },
-  { id: 'mq3',  text: 'Email Asha re: school dropoff swap' },
-  { id: 'mq4',  text: 'Book the dentist follow-up for September' },
-  { id: 'mq5',  text: 'Refund Joel for the conference ticket' },
-  { id: 'mq6',  text: 'Reply to Linnea about the Friday plans' },
-  { id: 'mq7',  text: 'Read chapter 5 of Annie Duke' },
-  { id: 'mq8',  text: 'Reorder the cat food and the slow-release flea drops' },
-  { id: 'mq9',  text: 'Pay the council tax — direct debit failed last month' },
-  { id: 'mq10', text: 'Final sweep on the Q3 deck before Monday' },
+  { id: 'mq1',  text: 'Sort the overflowing paper tray — file or bin', type: 'task' },
+  { id: 'mq2',  text: 'Cancel the second streaming service', type: 'task' },
+  { id: 'mq3',  text: 'Email Asha re: school dropoff swap', type: 'task' },
+  { id: 'mq4',  text: 'Book the dentist follow-up for September', type: 'task' },
+  { id: 'mq5',  text: 'Refund Joel for the conference ticket', type: 'task' },
+  { id: 'mq6',  text: 'Reply to Linnea about the Friday plans', type: 'task' },
+  { id: 'mq7',  text: 'Read chapter 5 of Annie Duke', type: 'task' },
+  { id: 'mq8',  text: 'Reorder the cat food and the slow-release flea drops', type: 'task' },
+  { id: 'mq9',  text: 'Pay the council tax — direct debit failed last month', type: 'task' },
+  { id: 'mq10', text: 'Final sweep on the Q3 deck before Monday', type: 'task' },
 ]

@@ -24,8 +24,9 @@ FR2: User can navigate between four independent views: Daily, Weekly, Monthly, B
 FR3: User can mark a task as completed (· → X) triggering an SVG hand-drawn animation
 FR5: User can unmark a task as completed and revert it to the uncompleted status
 FR6: User can permanently delete any entry from the current view
-FR7: At 18:00 local hour, if unresolved tasks exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view). 
-FR8: After midnight, on first navigation into a period view in a session, if unresolved tasks from the previous period exist and the view's ritual window is open (Daily: any day; Weekly: Monday or first app-open of the week; Monthly: 1st of month or first app-open of the month), a blocking migration prompt fires — preventing further interaction until all tasks are resolved.
+FR7: At 18:00 local hour, if unresolved tasks or unresolved events (status not `done`) exist in the current period view (Daily/Weekly/Monthly), a non-blocking end-of-day reminder banner is shown (retried on next 60s tick if the user is in Backlog view).
+FR8: After midnight, on first navigation into a period view in a session, if unresolved tasks or unresolved events from the previous period exist and the view's ritual window is open (Daily: any day; Weekly: Monday or first app-open of the week; Monthly: 1st of month or first app-open of the month), a blocking migration prompt fires — preventing further interaction until all entries are resolved.
+FR14: When viewing a period view (Daily/Weekly/Monthly), only entries belonging to the current period are displayed. Entries from previous periods — regardless of status (active, completed, migrated) — are not shown in the current period's list.
 FR9: User can switch between dark and light mode. 
 FR10: Each entry displays a symbol, text, and an optional formatted `when` label (time or date) when the entry has a scheduled time
 FR11: App displays an empty state when no entries exist in the current view
@@ -78,8 +79,9 @@ FR2: Epic 1 — ViewTabs navigation and view-scoped rendering
 FR3: Epic 3 — Task completion with SVG animation (BulletSymbol)
 FR5: Epic 3 — Unmark task as completed, revert to active (BulletSymbol / EntryActions)
 FR6: Epic 2 — Entry deletion via EntryActions
-FR7: Epic 4 — End-of-period reminder banner at 18:00 (EndOfPeriodBanner)
-FR8: Epic 4 — Blocking migration ritual on period navigation (MigrationPrompt)
+FR7: Epic 4 — End-of-period reminder banner at 18:00 (EndOfPeriodBanner); includes unresolved events
+FR8: Epic 4 — Blocking migration ritual on period navigation (MigrationPrompt); includes unresolved events
+FR14: Epic 2 — Period-scoped display filtering in useEntries / Story 2.1
 FR9: Epic 5 — ThemeSwitcher (dark / light mode)
 FR10: Epic 2 — Entry display: symbol + text + optional `when` label (EntryRow)
 FR11: Epic 1 — EmptyState component within EntryList
@@ -95,15 +97,15 @@ Users can open the app, see it load correctly, navigate between the four BuJo vi
 **FRs covered:** FR2, FR11, FR12, FR13
 
 ### Epic 2: Entry Management (Core CRUD)
-Users can create new entries, view the full list of entries for the active view, and delete entries. Each entry correctly displays its BuJo symbol, text, and optional time/date when set.
-**FRs covered:** FR1, FR6, FR10
+Users can create new entries, view the full list of entries for the active view, and delete entries. Each entry correctly displays its BuJo symbol, text, and optional time/date when set. Only entries from the current period are shown in period views.
+**FRs covered:** FR1, FR6, FR10, FR14
 
 ### Epic 3: Task State Transitions
 Users can mark a task as complete with a hand-drawn X animation, or revert it back to active.
 **FRs covered:** FR3, FR5
 
 ### Epic 4: Migration Ritual
-Users are reminded at 18:00 about unresolved tasks and guided through the blocking migration ritual when navigating into a period view after an unresolved period.
+Users are reminded at 18:00 about unresolved tasks and events, and are guided through the blocking migration ritual when navigating into a period view after an unresolved period.
 **FRs covered:** FR7, FR8
 
 ### Epic 5: Visual Theme & Dark/Light Mode
@@ -253,12 +255,14 @@ So that I can immediately see the BuJo system in action and understand how entri
 **And** mock entries include at least one task (·) and one event (○) per view
 **And** entries are displayed oldest-first, newest at bottom (BuJo page-fill direction)
 **And** the list is scrollable when entries exceed the visible area
+**And** entries from previous periods that are completed (`×`) or migrated (`>`) are not shown in the current period view — only entries belonging to the current period are visible (e.g. Daily shows only today's entries, Weekly only this week's, Monthly only this month's)
 
 **Design Decisions:**
 - Mock data sourced from `src/data/seed.ts`, seeded for all 4 views
 - Entry row component: `EntryRow.tsx` — symbol (22px fixed width, Kalam 700) + text (flex-grow, `.bj-write`) + optional `when` label via `formatWhen()` (0.45 opacity)
 - `ago` field is a sort key only — never displayed as a relative timestamp
 - All three columns (symbol, text, right slot) vertically aligned — `align-items: center` on the row grid
+- **Period-scoped display**: `useEntries` filters the displayed list by the active view's current period boundary (today for Daily, this week for Weekly, this month for Monthly). Entries from previous periods — regardless of status — are excluded from the current period's view. Completed and migrated entries from a previous period are only accessible via the migration ritual queue, not the main list.
 
 ---
 
@@ -360,7 +364,7 @@ At 18:00, users are reminded to deal with unresolved tasks via a non-blocking ba
 ### Story 4.1: Migration Ritual — Evening Banner & Per-View Blocking Prompt
 
 As a user,
-I want to be reminded at 18:00 to deal with unresolved tasks before the day ends, and be required to deal with them when I next open a period view,
+I want to be reminded at 18:00 to deal with unresolved tasks and events before the day ends, and be required to deal with them when I next open a period view,
 So that I consciously close out each period following the BuJo ritual — whether I'm actively using the app or not.
 
 **Acceptance Criteria:**
@@ -368,13 +372,13 @@ So that I consciously close out each period following the BuJo ritual — whethe
 **--- 18:00 TRIGGER (soft reminder) ---**
 
 **Given** the app is open (or is opened) at or after 18:00
-**When** there are active `task` entries in the current period (today's Daily, this week's Weekly, this month's Monthly)
+**When** there are active `task` entries or unresolved `event` entries (status not `done`) in the current period (today's Daily, this week's Weekly, this month's Monthly)
 **Then** the `EndOfPeriodBanner` appears immediately at the top of the current view with contextual copy:
   - Daily: "End of day. A new day starts tomorrow. Decide what to do with anything still on the page."
   - Weekly: "End of week. Tomorrow the week resets. Migrate what still matters; let the rest go."
   - Monthly: "End of month. A new month begins. Decide what carries forward — and what doesn't."
 **And** the banner has a dismiss (×) button — clicking it hides the banner for the session
-**And** the banner is not shown if there are no active tasks in the current period
+**And** the banner is not shown if there are no active tasks or unresolved events in the current period
 
 **--- NAVIGATION TRIGGER (blocking modal, per view) ---**
 
@@ -383,10 +387,11 @@ So that I consciously close out each period following the BuJo ritual — whethe
   - Daily: any day (ritual fires if there are unresolved tasks from before today's midnight)
   - Weekly: today is Monday, OR this is the first app-open since this week started (Monday)
   - Monthly: today is the 1st, OR this is the first app-open since this month started
-**When** there are active `task` entries from the previous period for that view (yesterday's Daily, last week's Weekly, last month's Monthly)
+**When** there are active `task` entries or unresolved `event` entries (status not `done`) from the previous period for that view (yesterday's Daily, last week's Weekly, last month's Monthly)
 **Then** the `MigrationPrompt` modal opens immediately for that view's queue and blocks all interaction — no dismiss, no "Maybe later"
 **And** the modal title is **"The morning ritual"** with section header **"Yesterday's leftovers"** (or week/month equivalent)
 **And** each unresolved task shows action buttons: **done (×)**, **today**, **migrate (→ submenu)**, **drop**
+**And** each unresolved event shows action buttons: **done (●)**, **today**, **migrate (→ submenu)**, **drop** — same set as tasks; marking an event done triggers the filled-circle animation
 **And** a badge shows **"N left"** (count of unresolved tasks)
 **And** the modal can only be closed once every task has been actioned
 **When** I click "today" on a task
@@ -409,7 +414,7 @@ So that I consciously close out each period following the BuJo ritual — whethe
 - `prevLastOpen`: read from `localStorage('bj-last-open')` on mount before overwriting — enables gap detection across app sessions (if last opened before this week/month started, ritual fires even on non-Monday/non-1st days)
 - `ritualQueue`: `useState<MigrationItem[]>` captured at modal-open time — never recomputed from live view state while modal is open
 - `shownRitualViews`: `useRef<Set<EntryView>>` — each view's ritual fires at most once per session
-- `unresolvedFromPreviousPeriod()` in `useEntries` — compares `entry.view` + `createdAt` against the period boundary (`startOfToday/ThisWeek/ThisMonth`)
+- `unresolvedFromPreviousPeriod()` in `useEntries` — compares `entry.view` + `createdAt` against the period boundary (`startOfToday/ThisWeek/ThisMonth`); returns both `task` entries with status !== `done` and `event` entries with status !== `done` (unresolved events are included in the ritual queue alongside tasks)
 - `EndOfPeriodBanner` renders above EntryList; dismissed via × only (session only) — no "Review now" button
 - `MigrationPrompt` with `canDefer={false}` when opened by the navigation ritual — hides "Maybe later" and disables backdrop dismiss
 - Per-task actions: **done (×) / today / migrate (→ submenu) / drop**

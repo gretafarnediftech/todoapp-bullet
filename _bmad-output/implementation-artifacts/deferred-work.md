@@ -75,3 +75,17 @@ Items deferred from BMad reviews. Each entry is real but not actionable at the t
 
 - `undoMigration` is exposed for all non-tomorrow migration destinations, extending the undo scope beyond FR14 (which limits revert to `destination === 'tomorrow'` only). Not harmful — covers a wider undo surface that is not explicitly prohibited — but diverges from the spec's FR14 scope. Revisit alignment when Story 3.2 is formally implemented.
 - Hook function named `undoMigration` diverges from Story 3.2's specified API name `unmigrateEntry`. Both address FR14 intent via different interaction patterns (undo button on dest copy vs `>` glyph on source). Align naming and interaction model when Story 3.2 is implemented.
+
+## Deferred from: code review of 3-2-revert-migrated-task-to-active (2026-05-29)
+
+- `migrate` tomorrow branch unconditionally overwrites the source entry's `when` field with a date string, losing time-of-day for timed daily events (e.g., `when: '16:00'` becomes `when: '2026-05-30'`). The copy shows a date label instead of the original time. In `useEntries.ts` `migrate()` — migrate rework bundled in same commit, different story scope.
+- Non-tomorrow `migrate` spreads `migratedFromId` from the source into the copy object without clearing it. A later `unmigrate(originalId)` will silently delete this copy across views via `.filter((e) => e.migratedFromId !== id)`. In `useEntries.ts` `migrate()` non-tomorrow branch.
+- Chained tomorrow migrations leave an orphan grandchild active copy after `unmigrate`. When A → A' → A'', calling `unmigrate(A.id)` deletes A' and restores A, but A'' (active copy of A', `migratedFromId: A'.id`) persists as an undeletable-via-unmigrate orphan.
+- `unmigrate` calls `persist` even if the source entry is missing (stale id): the copy is removed without the source being restored. Extreme edge case; consistent with rest of codebase pattern.
+
+## Deferred from: code review of 5-2-switch-between-dark-and-light-mode (2026-05-29)
+
+- Dark background token `#0f0d0a` deviates from NFR6 spec value `#141414` in `src/hooks/useTheme.ts`. Pre-existing from Story 5.1; minor — both are perceptually near-black.
+- Light token color deviations from NFR6: `--bj-bg` `#fafaf7` vs `#F5F4F0`; `--bj-ink` `#0a0a0a` vs `#1A1A1A` in `src/hooks/useTheme.ts`. Pre-existing from Story 5.1.
+- `as React.CSSProperties` type cast in `src/hooks/useTheme.ts:39` suppresses a real type mismatch (CSS custom property keys are not in `React.CSSProperties`). Pre-existing.
+- No cross-tab storage sync: toggling dark mode in one tab does not update other open tabs (would require a `window` `storage` event listener). Out of scope for this story.

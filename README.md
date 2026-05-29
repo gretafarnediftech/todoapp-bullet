@@ -45,43 +45,116 @@ A working frontend prototype of a digital Bullet Journal. It runs entirely in th
 
 ## How I used BMAD and Cursor
 
-### Step 1 — BMAD for spec generation
+### Phase 0 — Domain research and product definition
 
-Installed BMAD-METHOD (`npx bmad-method install`) and ran through three personas:
+The starting point was a generic PRD provided as part of the exercise. Because it was intentionally open-ended, the first decision was to pick a specific take rather than build another generic todo app. I chose a **Bullet Journal** — a system I actually wanted for myself, which made me the primary user. Knowing what I wanted removed a lot of ambiguity.
 
-1. **PM persona** — refined the initial PRD into a focused product brief (`_bmad-output/planning-artifacts/project-brief.md`) with clear scope, out-of-scope list, and success criteria
-2. **Architect persona** — generated a component inventory (`_bmad-output/planning-artifacts/component-inventory.md`) with screens, data model, component tree, and prop specs
-3. **Story Writer persona** — broke work into 7 user stories with UI-focused acceptance criteria and design decisions (`_bmad-output/planning-artifacts/epics.md`)
+Before opening any code editor I ran a research session with Claude:
 
-The design spec (`docs/bujo-design-spec.md`) started as a brainstorm and was progressively updated as new design inputs arrived (BuJo markdown spec → HTML mockups from Figma export → final handoff bundle).
+- Explored the Bullet Journal method (analog origins, core concepts, symbol system)
+- Did a quick market scan of existing digital BuJo apps to understand what was already out there since I wanted to do something different
+- Used Claude to write a structured `.md` file capturing my requirements: which features I wanted, which I wanted to leave out, and the visual style I had in mind (handwritten feel, dot-grid paper, minimal chrome)
 
-### Step 2 — Design handoff analysis
+This document became the seed for everything that followed.
 
-The design was delivered as a Claude Design handoff (`todo-app-bj`): a self-contained HTML prototype with React UMD + Babel (no bundler). Before touching any production code, I used Cursor to:
+---
 
-- Read the full `bujo-app.jsx` (2274 lines) and `Todo App.html` (1340 lines) from the zip
-- Identify all differences between the existing BMAD specs and the final design (14 corrections documented in the plan)
-- Clarify 3 ambiguities with the user (note type, priority field, `originalText`)
-- Update `docs/bujo-design-spec.md` with confirmed token values, exact CSS class names, correct symbol Unicode, and interaction details
+### Phase 1 — Project setup and BMAD · PM persona
 
-### Step 3 — Cursor for implementation
+Initialized the project in Cursor (`npm create vite@latest . -- --template react-ts`) and installed BMAD:
 
-Used Cursor Agent to translate the spec into production React + TypeScript:
+```bash
+npx bmad-method install
+```
 
-- CSS design system (`src/styles/bj.css`) extracted directly from the prototype's 1100-line `<style>` block
-- Components follow the same structure as the prototype but in TypeScript with proper typing
-- All SVG doodles (mascots, tab icons, action icons) ported from JSX to `.tsx`
-- `useEntries` hook with localStorage persistence replacing the prototype's in-memory `useState`
+Then activated the **PM persona** to translate my requirements into formal planning artifacts:
+
+- **Project brief** (`_bmad-output/planning-artifacts/project-brief.md`) — product vision, in-scope features, explicit out-of-scope list, success criteria
+- **Initial PRD refinement** — structured functional and non-functional requirements, a UX requirements inventory, and a FR coverage map linking each requirement to an epic
+
+After reading the output I realised the documents were technically correct but didn't fully reflect the visual language and UX interactions I had in mind. Rather than forcing the specs forward from text alone, I paused and went back to the design.
+
+---
+
+### Phase 2 — Design exploration and high-fidelity prototype
+
+I explored several tools to find a design workflow that felt fast and expressive:
+
+- **Figma Make** — tried it, useful for layout sketching but not quite for the handcrafted feel I was after
+- **ChatGPT** — generated some ideas but the visual output wasn't precise enough
+- **Claude Design** — clicked immediately; the conversational iteration loop matched how I think about design
+
+I settled on **Claude Design** and iterated extensively, session by session, until I had:
+
+- All four views (Daily, Weekly, Monthly, Future Log) fully defined at high fidelity
+- Every UX interaction specified: inline add, inline edit, inline delete, migration ritual modal, end-of-period banner, theme switcher
+- A consistent visual language: Kalam + Inter typefaces, BuJo symbol set (`·` `×` `›` `○`), dot-grid background, dark/light palettes with grain texture
+
+At the end of this phase I exported the final design from Claude Design as a **self-contained HTML file** — a React UMD + Babel prototype with all styles and JSX in a single bundle.
+
+---
+
+### Phase 3 — Design handoff analysis with Cursor
+
+Before writing a single line of production code I gave the exported HTML to Cursor and asked it to analyse the design:
+
+- Read `bujo-app.jsx` (2274 lines) and `Todo App.html` (1340 lines) from the export
+- Cross-referenced the existing BMAD specs against the final design and identified **14 corrections** (wrong token values, missing component props, incorrect symbol Unicode, undocumented interaction states)
+- Clarified 3 ambiguities interactively (note type semantics, priority field, `originalText` behaviour on edit)
+- Updated `docs/bujo-design-spec.md` with exact CSS class names, confirmed hex values (`#fafaf7`, `rgba(0,0,0,0.10)`), and precise interaction rules (e.g. the `canDefer` distinction in the migration modal)
+
+This analysis step was the bridge between the design world and the spec world. It kept the BMAD documents as the single source of truth rather than letting the code diverge from them.
+
+---
+
+### Phase 4 — BMAD spec completion · Architect and Story Writer personas
+
+With a corrected design spec in hand, I returned to BMAD to complete the planning layer:
+
+**Architect persona**
+- Generated `_bmad-output/planning-artifacts/component-inventory.md`: screens, full data model (`Entry`, `EntryView`, `EntryStatus`, `EntryType`), component tree with prop signatures, `localStorage` persistence strategy
+
+**Story Writer persona (Epics + Stories)**
+- Broke the work into 5 epics and 14 user stories in `_bmad-output/planning-artifacts/epics.md`, each with:
+  - Precise UI-focused acceptance criteria
+  - Explicit design decisions and edge cases
+  - A story file (`_bmad-output/implementation-artifacts/`) generated before each implementation session to give the dev agent full context
+
+| Epic | Title |
+|------|-------|
+| Epic 1 | Foundation — scaffold, tabs, loading, empty, error states |
+| Epic 2 | Entry management — list display, add, delete |
+| Epic 3 | Task lifecycle — complete with SVG animation, revert |
+| Epic 4 | Migration ritual — end-of-period banner + morning modal |
+| Epic 5 | Visual polish — BuJo theme + dark/light mode |
+
+---
+
+### Phase 5 — Implementation with Cursor Agent · story by story
+
+Used Cursor Agent to implement one story at a time, always starting from the story file:
+
+- CSS design system (`src/styles/bj.css`) extracted directly from the prototype's 1100-line `<style>` block — no rewriting, no guessing token values
+- Each component follows the structure of the prototype but rewritten in TypeScript with proper typing and split into separate files
+- `useEntries` hook with `localStorage` persistence, replacing the prototype's in-memory `useState`
+
+After each story, Cursor ran a structured **code review** (Blind Hunter + Edge Case Hunter layers). Non-blocking findings were logged to `_bmad-output/implementation-artifacts/deferred-work.md` rather than interrupting the sprint.
+
+---
 
 ### What I learned
 
-1. **Spec-first pays off** — having a detailed component inventory before coding meant no architectural surprises during implementation. Every component was already named and its props were known.
+1. **Starting with "I am the user" removes ambiguity** — choosing a domain I knew personally meant I could make fast, confident decisions during spec writing and design. The PRD was generic; the bullet journal take gave it shape.
 
-2. **Design handoffs as code are better than screenshots** — reading the actual CSS and JSX gave exact token values (`#fafaf7`, `rgba(0,0,0,0.10)`) and interaction logic (e.g. the migration `canDefer` distinction) that no screenshot could convey.
+2. **Design-first, then spec — not the other way round** — running the PM persona before the design was done produced technically valid but emotionally empty docs. The right order for me was: research → design exploration → high-fidelity prototype → spec update → then finish the planning artifacts.
 
-3. **BMAD artifacts are living documents** — the specs needed 14 corrections after the final design handoff. Updating them *before* writing production code prevented those errors from multiplying across many files.
+3. **Design handoffs as code beat screenshots** — the exported HTML gave exact token values, interaction logic, and animation keyframes that no image could capture. Cursor could read the actual CSS and JSX, not describe what it saw in a picture.
 
-4. **The prototype's structure ≠ the production structure** — the handoff used React UMD + Babel (no bundler, one 2000-line file). Production code uses Vite, TypeScript, and separate files. Cursor helped translate patterns without copying the prototype's architecture.
+4. **BMAD artifacts are living documents** — 14 corrections were needed after the design handoff. Updating the specs *before* writing production code prevented those errors from multiplying across every component.
+
+5. **The story file is the real unit of work** — generating a dedicated story file before each implementation session (rather than pointing the agent at the epic document) meant the agent had exactly the right context and didn't hallucinate missing details.
+
+6. **Keep all artifacts in sync or pay for it later** — if the design spec, the story file, and the code diverge even slightly, the agent implements the wrong thing with full confidence. Worse, the code review then flags correct code as wrong (because it's comparing against a stale spec), or misses real bugs (because the spec doesn't reflect what was actually decided). Every time a design decision changed, updating *all* affected documents — spec, epic, story — before resuming implementation was the only way to keep the feedback loop honest.
 
 ---
 

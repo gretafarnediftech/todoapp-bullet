@@ -1,6 +1,6 @@
 # Story 4.2: Morning Migration Ritual (Post-Midnight Navigation Trigger)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -93,15 +93,54 @@ All ACs implemented and verified with `npx tsc --noEmit` + `npm run build` (clea
 - `view={view}` passed from `App.tsx` only for `migrationOpen === 'ritual'` (demo reminder mode unaffected)
 - `remaining` counter + `.bj-mig-badge` rendered in `.bj-mig-head-right` wrapper alongside close button; disappears when all items decided
 - `.bj-mig-head-right` and `.bj-mig-badge` CSS added to `bj.css`
+- Amendment complete: ritual queue now includes unresolved events from previous period
+- Amendment complete: event items render `○` as pending and `●` for done action/state in `MigrationPrompt`
+- Amendment complete: `drop` removes the source entry permanently instead of setting `status: 'done'`
+- Amendment complete: migration-created entries preserve original item type (`task`/`event`)
 - Review findings from story 4.1 already resolved in the codebase (ref-flag-before-guard, ritualQueue stability, morning-after-01:00 window) — confirmed not regressed
 
 ## File List
 
 - `src/components/App.tsx`
 - `src/components/MigrationPrompt.tsx`
+- `src/hooks/useEntries.ts`
+- `src/types/entry.ts`
+- `src/data/seed.ts`
 - `_bmad-output/implementation-artifacts/4-2-morning-migration-ritual.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
 - 2026-05-29: Story created and implemented (Story 4.2)
+- 2026-05-29: Amendment completed (events in ritual queue, permanent drop removal, type-safe migration)
+
+---
+
+## Amendment: Events in Ritual Queue (2026-05-29)
+
+**Source:** Sprint Change Proposal 2026-05-29-bug-fixes — Fix 2 (completed)
+
+The following amendment behavior has been incorporated into the implementation.
+
+### Additional Acceptance Criteria
+
+13. **Given** the ritual fires for a period view **And** the previous period contains unresolved `event` entries (status not `done`) alongside tasks **Then** the events appear in the ritual queue alongside tasks, with the same action set: **done (●)**, **today**, **migrate (→ submenu)**, **drop**.
+14. **Given** all tasks in the queue are actioned but unresolved events remain **Then** the modal does NOT close — the "N left" badge counts events too, and Confirm remains disabled until every item (task and event) is decided.
+
+### Additional Tasks
+
+- [x] **Expand `unresolvedFromPreviousPeriod()` to include events** (`useEntries.ts`)
+  - [x] Return both `task` entries with `status !== 'done'` AND `event` entries with `status !== 'done'` from the previous period
+  - [x] `MigrationItem` type accepts `type: 'event'`
+
+- [x] **Render event symbol in `MigrationPrompt` ritual queue** (`MigrationPrompt.tsx`)
+  - [x] When item `type === 'event'`, render inline `●` instead of `×` for done state/action
+  - [x] "done" action on an event resolves to `status: 'done'` through `resolveMigration`
+
+- [x] **Verify `ritualQueue` count includes events** (`App.tsx`)
+  - [x] `unresolvedFromPreviousPeriod()` call that populates `ritualQueue` receives the expanded return set
+  - [x] `remaining` badge count is unaffected — counts all undecided items regardless of type
+
+- [x] **Fix drop behavior to permanent removal** (`useEntries.ts`)
+  - [x] `drop` now removes source entries from state instead of marking them as `done`
+  - [x] Verified in build: no type/runtime regressions introduced by queue expansion

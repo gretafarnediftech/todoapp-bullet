@@ -1,6 +1,6 @@
 # Story 3.2: Revert a Migrated Task to Active
 
-Status: review
+Status: done
 
 ## Story
 
@@ -41,7 +41,8 @@ so that I can change my mind after migrating without having to re-create the tas
 - `unmigrate` lives in `useEntries` alongside `cycle`, `migrate`, `undoMigration`
 - Only tasks with `migratedTo === 'tomorrow'` are eligible (scoped to FR14); other destinations are non-interactive
 - No animation on revert (mirrors the uncomplete-task pattern from FR5)
-- The copy that was created in the daily view when migrating to tomorrow is NOT removed — that is handled separately by `undoMigration`; unmigrate only restores the source entry's status
+- `unmigrate` removes the daily copy (via `.filter((e) => e.migratedFromId !== id)`) **and** restores the source entry's status — this is intentional; keeping the copy would leave a duplicate task
+- Automatic cleanup: on app load, `cleanExpiredTomorrowMigrations` removes any `→ tomorrow` source entries whose copy's `when` date has arrived (i.e. `copy.when <= today`), leaving only the active copy in the daily view. Orphaned sources (copy deleted) are also cleaned up.
 
 ### Key Files
 
@@ -80,3 +81,11 @@ Weekly view has `w3` (`migratedTo: 'next week'`) which must remain non-interacti
 - Glyph button cursor set to `pointer` for tomorrow-migrated tasks; non-tomorrow migrated glyphs remain `default` (non-interactive) per AC 7
 - TypeScript clean, zero build errors
 - Seed data: `d7` (`migratedTo: 'tomorrow'`) demos the revert; `w3` (`migratedTo: 'next week'`) remains non-interactive
+
+### Review Findings
+
+- [x] [Review][Patch] `color: 'inherit'` accidentally dropped from glyph button style [src/components/EntryRow.tsx] — removed when cursor ternary was split onto its own line; Glyph SVG uses `currentColor`, defensive regression
+- [x] [Review][Defer] `migrate` tomorrow branch unconditionally overwrites `when` with a date string, losing time-of-day on timed events [src/hooks/useEntries.ts] — deferred, pre-existing from migrate rework in same commit (different story scope)
+- [x] [Review][Defer] Non-tomorrow `migrate` spreads `migratedFromId` into copy; a subsequent `unmigrate(parentId)` silently deletes unrelated copies across views [src/hooks/useEntries.ts] — deferred, pre-existing from migrate rework in same commit
+- [x] [Review][Defer] Chained tomorrow migrations leave an orphan grandchild active copy after `unmigrate` [src/hooks/useEntries.ts] — deferred, edge case out of story 3-2 scope
+- [x] [Review][Defer] `unmigrate` calls `persist` even when source entry is missing, deleting the copy without restoring anything [src/hooks/useEntries.ts] — deferred, extreme edge case, consistent with rest of codebase

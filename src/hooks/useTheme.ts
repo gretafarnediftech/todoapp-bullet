@@ -1,8 +1,10 @@
-import { useState, useCallback } from 'react'
-import type { Palette } from '../types/entry'
+import { useState, useEffect, useCallback } from 'react'
+import type { ThemeMode } from '../types/entry'
 
-const PALETTE_DEFS: Record<Palette, Record<string, string>> = {
-  bw: {
+const STORAGE_KEY = 'bj-theme'
+
+const THEME_DEFS: Record<ThemeMode, Record<string, string>> = {
+  light: {
     '--bj-bg':   '#fafaf7',
     '--bj-ink':  '#0a0a0a',
     '--bj-rule': 'rgba(0,0,0,0.10)',
@@ -21,13 +23,27 @@ const PALETTE_DEFS: Record<Palette, Record<string, string>> = {
 }
 
 export function useTheme() {
-  const [palette, setPalette] = useState<Palette>('bw')
+  const [mode, setMode] = useState<ThemeMode>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) === 'dark' ? 'dark' : 'light'
+    } catch {
+      return 'light'
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, mode)
+    } catch {
+      // Storage unavailable (private browsing, sandboxed iframe) — ignore
+    }
+  }, [mode])
 
   const toggleDark = useCallback(() => {
-    setPalette((p) => (p === 'dark' ? 'bw' : 'dark'))
+    setMode((m) => (m === 'dark' ? 'light' : 'dark'))
   }, [])
 
-  const themeStyle = PALETTE_DEFS[palette] as React.CSSProperties
+  const themeStyle = THEME_DEFS[mode] as React.CSSProperties
 
-  return { palette, toggleDark, themeStyle, isDark: palette === 'dark' }
+  return { themeStyle, isDark: mode === 'dark', toggleDark }
 }

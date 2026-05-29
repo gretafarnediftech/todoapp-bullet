@@ -1,6 +1,6 @@
 # Story 5.2: Switch Between Dark and Light Mode
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -91,6 +91,18 @@ const [mode, setMode] = useState<ThemeMode>(() =>
 - Current hook: [Source: src/hooks/useTheme.ts]
 - HeaderBar toggle: [Source: src/components/HeaderBar.tsx]
 - Story 5.1: base theme audit [Source: 5-1-bujo-visual-theme-applied.md]
+
+### Review Findings
+
+- [x] [Review][Patch] localStorage init not wrapped in try/catch — SecurityError crashes React tree on first render in private-browsing Safari and sandboxed iframes [`src/hooks/useTheme.ts:27`]
+- [x] [Review][Patch] Side effect (localStorage.setItem) inside setState updater — fires twice in React 18 Strict Mode; move setItem out of updater [`src/hooks/useTheme.ts:31-37`]
+- [x] [Review][Patch] Rename `'bw'` → `'light'` throughout — `Palette` type, `PALETTE_DEFS` key, state init, and stored-value branch all still use `'bw'`; spec requires `ThemeMode = 'light' | 'dark'` [`src/types/entry.ts:4`, `src/hooks/useTheme.ts:6–22`]
+- [x] [Review][Patch] `palette` still exposed in hook return — spec return shape is `{ themeStyle, isDark, toggleDark }`; remove `palette` from return [`src/hooks/useTheme.ts:40`]
+- [x] [Review][Patch] No CSS grain/noise texture for dark mode — AC2 + NFR6 + UX-DR7 all require a grain texture when dark mode is active; none exists in bj.css [`src/styles/bj.css`]
+- [x] [Review][Defer] Dark background token `#0f0d0a` vs NFR6 spec `#141414` [`src/hooks/useTheme.ts:15`] — deferred, pre-existing from Story 5.1
+- [x] [Review][Defer] Light token color deviations (`#fafaf7` vs `#F5F4F0`, `#0a0a0a` vs `#1A1A1A`) [`src/hooks/useTheme.ts:8-9`] — deferred, pre-existing from Story 5.1
+- [x] [Review][Defer] `as React.CSSProperties` type cast suppresses a type error for CSS custom properties [`src/hooks/useTheme.ts:39`] — deferred, pre-existing
+- [x] [Review][Defer] No cross-tab storage sync (window `storage` event) — palette diverges between open tabs — deferred, out of scope for this story
 
 ## Dev Agent Record
 
