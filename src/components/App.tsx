@@ -4,6 +4,8 @@ import { MIGRATION_QUEUE } from '../data/seed'
 import { useEntries, unresolvedFromPreviousPeriod, startOfToday, startOfThisWeek, startOfThisMonth } from '../hooks/useEntries'
 import { useTheme } from '../hooks/useTheme'
 import { useTimeReminder } from '../hooks/useTimeReminder'
+import { useAuth } from '../hooks/useAuth'
+import { LoginScreen } from './LoginScreen'
 
 import { HeaderBar } from './HeaderBar'
 import { Tabs } from './Tabs'
@@ -48,6 +50,7 @@ interface BuJoAppProps {
   themeStyle: React.CSSProperties
   isDark: boolean
   onToggleDark: () => void
+  onSignOut: () => void
   entries: ReturnType<typeof useEntries>['entries']
   isLoading: ReturnType<typeof useEntries>['isLoading']
   hasError: ReturnType<typeof useEntries>['hasError']
@@ -64,7 +67,7 @@ interface BuJoAppProps {
   resolveMigration: ReturnType<typeof useEntries>['resolveMigration']
 }
 
-function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading, hasError, retryLoad, simulateError, cycle, unmigrate, add, edit, remove, migrate, undoMigration, migratedDestIds, resolveMigration }: BuJoAppProps) {
+function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, onSignOut, entries, isLoading, hasError, retryLoad, simulateError, cycle, unmigrate, add, edit, remove, migrate, undoMigration, migratedDestIds, resolveMigration }: BuJoAppProps) {
   const [view, setView] = useState<EntryView>('daily')
   const [migrationOpen, setMigrationOpen] = useState<null | 'reminder' | 'ritual'>(null)
   const [legendOpen, setLegendOpen] = useState(false)
@@ -178,6 +181,7 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
         isDark={isDark}
         onToggleDark={onToggleDark}
         onShowLegend={() => setLegendOpen(true)}
+        onSignOut={onSignOut}
       />
 
       {/* Scrollable content */}
@@ -291,13 +295,42 @@ function BuJoApp({ mobile, themeStyle, isDark, onToggleDark, entries, isLoading,
 export default function App() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   const { themeStyle, isDark, toggleDark } = useTheme()
-  const entriesCtx = useEntries()
+  const { session, signIn, signOut } = useAuth()
+  const entriesCtx = useEntries(session?.user.id ?? null)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Auth loading
+  if (session === undefined) {
+    return (
+      <div
+        data-theme={isDark ? 'dark' : 'light'}
+        style={{
+          ...(themeStyle as React.CSSProperties),
+          height: '100dvh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bj-bg)',
+          color: 'var(--bj-ink)',
+          fontFamily: 'var(--bj-font)',
+          opacity: 0.4,
+          fontSize: 14,
+        }}
+      >
+        Loading…
+      </div>
+    )
+  }
+
+  // Not logged in
+  if (session === null) {
+    return <LoginScreen onSignIn={signIn} />
+  }
 
   return (
     <div style={{ height: '100dvh' }}>
@@ -306,6 +339,7 @@ export default function App() {
         themeStyle={themeStyle as React.CSSProperties}
         isDark={isDark}
         onToggleDark={toggleDark}
+        onSignOut={signOut}
         {...entriesCtx}
       />
     </div>

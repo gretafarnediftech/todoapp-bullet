@@ -9,9 +9,10 @@ interface HeaderBarProps {
   isDark: boolean
   onToggleDark: () => void
   onShowLegend: () => void
+  onSignOut?: () => void
 }
 
-export function HeaderBar({ mobile, view, onChangeView, isDark, onToggleDark, onShowLegend }: HeaderBarProps) {
+export function HeaderBar({ mobile, view, onChangeView, isDark, onToggleDark, onShowLegend, onSignOut }: HeaderBarProps) {
   const btnStyle: React.CSSProperties = {
     appearance: 'none', border: 0, background: 'transparent',
     color: 'inherit', cursor: 'pointer', padding: 8,
@@ -87,6 +88,17 @@ export function HeaderBar({ mobile, view, onChangeView, isDark, onToggleDark, on
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
+          {onSignOut && (
+            <button
+              style={{ ...btnStyle, fontSize: 11, fontFamily: 'inherit', padding: '4px 8px' }}
+              className="bj-header-btn"
+              onClick={onSignOut}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              Sign out
+            </button>
+          )}
         </div>
       </div>
     </header>

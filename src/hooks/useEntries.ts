@@ -1,5 +1,59 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import type { Entry, EntryView, EntryType, MigDecisionKind, MigrationItem } from '../types/entry'
+import type { Entry, EntryView, EntryType, EntryStatus, MigDecisionKind, MigrationItem } from '../types/entry'
+import { supabase } from '../lib/supabase'
+
+// ─── Supabase row type + mappers ──────────────────────────────
+
+type EntryRow = {
+  id: string
+  user_id: string
+  view: string
+  type: string
+  text: string
+  ago: number
+  status: string
+  created_at: number | null
+  when_date: string | null
+  migrated_to: string | null
+  migrated_from_id: string | null
+  original_text: string | null
+  completed_at: number | null
+}
+
+function toRow(entry: Entry, userId: string): EntryRow {
+  return {
+    id: entry.id,
+    user_id: userId,
+    view: entry.view,
+    type: entry.type,
+    text: entry.text,
+    ago: entry.ago,
+    status: entry.status,
+    created_at: entry.createdAt ?? null,
+    when_date: entry.when ?? null,
+    migrated_to: entry.migratedTo ?? null,
+    migrated_from_id: entry.migratedFromId ?? null,
+    original_text: entry.originalText ?? null,
+    completed_at: entry.completedAt ?? null,
+  }
+}
+
+function fromRow(row: EntryRow): Entry {
+  return {
+    id: row.id,
+    view: row.view as EntryView,
+    type: row.type as EntryType,
+    text: row.text,
+    ago: row.ago,
+    status: row.status as EntryStatus,
+    createdAt: row.created_at ?? undefined,
+    when: row.when_date ?? undefined,
+    migratedTo: row.migrated_to ?? undefined,
+    migratedFromId: row.migrated_from_id ?? undefined,
+    originalText: row.original_text ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+  }
+}
 
 // ─── Migration undo record (session-only) ────────────────────
 
@@ -47,25 +101,9 @@ function cleanExpiredTomorrowMigrations(entries: Entry[]): Entry[] {
 
 import { SEED_ENTRIES } from '../data/seed'
 
-const STORAGE_KEY = 'bj-entries'
-
 function resolveCreatedAt(entry: Entry): number {
   if (entry.createdAt != null) return entry.createdAt
   return Date.now() - entry.ago * 60 * 1000
-}
-
-function loadEntries(): Entry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as Entry[]
-      // Backfill createdAt for entries that predate this field
-      return parsed.map((e) =>
-        e.createdAt != null ? e : { ...e, createdAt: resolveCreatedAt(e) },
-      )
-    }
-  } catch { /* ignore */ }
-  return SEED_ENTRIES.map((e) => ({ ...e, createdAt: resolveCreatedAt(e) }))
 }
 
 // ─── Period boundary helpers ──────────────────────────────────
@@ -109,12 +147,6 @@ export function unresolvedFromPreviousPeriod(entries: Entry[], view: EntryView):
     .map((e) => ({ id: e.id, text: e.text, type: e.type }))
 }
 
-function saveEntries(entries: Entry[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
-  } catch { /* ignore */ }
-}
-
 let _nextId = Date.now()
 function newId() { return `e${_nextId++}` }
 
@@ -126,7 +158,7 @@ const DEST_LABEL: Record<string, string> = {
   backlog:  'future log',
 }
 
-export function useEntries() {
+export function useEntries(userId: string | null) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -136,59 +168,108 @@ export function useEntries() {
   entriesRef.current = entries
   // Session-only undo stack: destEntryId → undo record
   const undoStackRef = useRef<Map<string, UndoRecord>>(new Map())
-  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const clearLoadTimer = useCallback(() => {
-    if (loadTimerRef.current) {
-      clearTimeout(loadTimerRef.current)
-      loadTimerRef.current = null
-    }
-  }, [])
 
   useEffect(() => {
+    if (!userId) return
     const params = new URLSearchParams(window.location.search)
     if (params.get('error') === '1') {
       setIsLoading(false)
       setHasError(true)
       return
     }
-    loadTimerRef.current = setTimeout(() => {
-      const loaded = loadEntries()
+
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', userId)
+
+      if (cancelled) return
+      if (error) {
+        setIsLoading(false)
+        setHasError(true)
+        return
+      }
+
+      let loaded: Entry[]
+      if (data && data.length > 0) {
+        loaded = (data as EntryRow[]).map(fromRow)
+      } else {
+        // First login: seed with default entries and persist them
+        loaded = SEED_ENTRIES.map((e) => ({ ...e, createdAt: resolveCreatedAt(e) }))
+        const rows = loaded.map((e) => toRow(e, userId))
+        await supabase.from('entries').insert(rows)
+      }
+
       const cleaned = cleanExpiredTomorrowMigrations(loaded)
-      if (cleaned !== loaded) saveEntries(cleaned)
+      if (cleaned !== loaded) {
+        const toDelete = loaded
+          .filter((e) => !cleaned.some((c) => c.id === e.id))
+          .map((e) => e.id)
+        if (toDelete.length > 0) {
+          await supabase.from('entries').delete().in('id', toDelete).eq('user_id', userId)
+        }
+      }
       setEntries(cleaned)
       setIsLoading(false)
-      loadTimerRef.current = null
-    }, 1000)
-    return clearLoadTimer
-  }, [clearLoadTimer])
+    })()
+
+    return () => { cancelled = true }
+  }, [userId])
 
   const retryLoad = useCallback(() => {
-    clearLoadTimer()
+    if (!userId) return
     setHasError(false)
     setIsLoading(true)
     setEntries([])
-    loadTimerRef.current = setTimeout(() => {
-      const loaded = loadEntries()
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', userId)
+
+      if (error) {
+        setIsLoading(false)
+        setHasError(true)
+        return
+      }
+
+      const loaded = data && data.length > 0
+        ? (data as EntryRow[]).map(fromRow)
+        : SEED_ENTRIES.map((e) => ({ ...e, createdAt: resolveCreatedAt(e) }))
+
       const cleaned = cleanExpiredTomorrowMigrations(loaded)
-      if (cleaned !== loaded) saveEntries(cleaned)
       setEntries(cleaned)
       setIsLoading(false)
-      loadTimerRef.current = null
-    }, 1000)
-  }, [clearLoadTimer])
+    })()
+  }, [userId])
 
   const simulateError = useCallback(() => {
-    clearLoadTimer()
     setEntries([])
     setIsLoading(false)
     setHasError(true)
-  }, [clearLoadTimer])
+  }, [])
 
   const persist = useCallback((next: Entry[]) => {
+    const prev = entriesRef.current
     setEntries(next)
-    saveEntries(next)
-  }, [])
+
+    if (!userId) return
+
+    // Diff to find deleted entries
+    const nextIds = new Set(next.map((e) => e.id))
+    const deletedIds = prev.filter((e) => !nextIds.has(e.id)).map((e) => e.id)
+
+    void (async () => {
+      if (deletedIds.length > 0) {
+        await supabase.from('entries').delete().in('id', deletedIds).eq('user_id', userId)
+      }
+      if (next.length > 0) {
+        await supabase.from('entries').upsert(next.map((e) => toRow(e, userId)))
+      }
+    })()
+  }, [userId])
 
   const cycle = useCallback((id: string, status: Entry['status']) => {
     const next = entriesRef.current.map((e) =>
